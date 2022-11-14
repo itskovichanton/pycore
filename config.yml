@@ -1,0 +1,47 @@
+app:
+  name: CoreTestApp
+  version: 1.0.0
+
+alerts:
+  email:
+    username: finstart.mailer
+    password: Shaxz0da201306
+    host: mail.molbulak.com
+    address: mail.molbulak.com:25
+  fr:
+    url: http://10.1.2.103:8091
+    developer_id: 106567582
+
+server:
+  port: 8086
+  http:
+    ssl:
+      network: tcp4
+      certFile: ../commons/ssl/molbulak.com.crt
+      keyFile: ../commons/ssl/molbulak.com.key
+      enabled: false
+    multipart:
+      maxRequestSizeBytes: 5MB
+
+actions:
+  defaultLang: ru
+
+sh:
+  executor: C:\Program Files\Git\bin\bash.exe
+
+prod:
+  mainServiceUrl: http://10.1.2.106:5001
+  qcb:
+    version: 1
+    requestType: 2
+    consentUser: ООО "МКК М Булак"
+
+dev:
+  mainServiceUrl: http://10.1.2.106:5005
+  qcb:
+    version: 1.1
+    requestType: 2
+    inn: 7700001230
+    ogrn: 1770000001230
+    consentUser: Общество с ограниченной ответственностью "Тестовый кредитор"
+
