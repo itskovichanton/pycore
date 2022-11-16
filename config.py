@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass
-from typing import Protocol, Optional, Union
+from typing import Protocol, Optional
 
 import yaml
 from dacite import from_dict
@@ -16,20 +16,6 @@ class ConfigService(Protocol):
 
     def app_name(self) -> str:
         """A Flyer can fly"""
-
-
-@dataclass
-class EmailConfig:
-    username: str
-    password: str
-    host: str
-    address: str
-
-
-@dataclass
-class FRConfig:
-    url: str
-    developer_id: int
 
 
 @dataclass

@@ -3,14 +3,21 @@ app:
   version: 1.0.0
 
 alerts:
-  email:
-    username: finstart.mailer
-    password: Shaxz0da201306
-    host: mail.molbulak.com
-    address: mail.molbulak.com:25
-  fr:
-    url: http://10.1.2.103:8091
-    developer_id: 106567582
+  emails:
+    - a.itskovich@molbulak.com
+
+email:
+  from: finstart.mailer@molbulak.com
+  username: finstart.mailer
+  password: Shaxz0da201306
+  host: mail.molbulak.com
+  address: mail.molbulak.com
+  port: 25
+  encoding: utf-8
+
+fr:
+  url: http://10.1.2.103:8091
+  developer_id: 106567582
 
 server:
   port: 8086

@@ -1,14 +1,23 @@
+import asyncio
+
 from opyoid import Injector
 
 from app import Application
 from di import CoreModule
 
 
-def main() -> None:
+async def main() -> None:
+
     injector = Injector([CoreModule])
-    app1 = injector.inject(Application)
-    app1.run()
+    app = injector.inject(Application)
+
+    await app.run()
 
 
 if __name__ == '__main__':
-    main()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass
