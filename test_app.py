@@ -20,4 +20,4 @@ class TestCoreApplication(Application):
 
     @alert_on_fail
     async def do_stuff_with_errors(self):
-        return f"{1/0}"
+        return f"{1 / 0}"
