@@ -1,16 +1,11 @@
 import asyncio
 
-from opyoid import Injector
-
 from app import Application
-from di import CoreModule
+from di import injector
 
 
 async def main() -> None:
-
-    injector = Injector([CoreModule])
     app = injector.inject(Application)
-
     await app.run()
 
 

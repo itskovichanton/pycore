@@ -1,4 +1,4 @@
-from opyoid import Module
+from opyoid import Module, Injector
 
 from alerts import AlertService, AlertServiceImpl
 from app import Application
@@ -16,3 +16,6 @@ class CoreModule(Module):
         self.bind(EmailService, to_class=EmailServiceImpl)
         self.bind(AlertService, to_class=AlertServiceImpl)
         self.bind(Application, to_class=TestCoreApplication)
+
+
+injector = Injector([CoreModule])
