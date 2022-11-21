@@ -1,7 +1,7 @@
 from opyoid import Module, Injector
 
-from src.bootstrapcore_itskovichanton.app import Application
-from src.bootstrapcore_itskovichanton.di import CoreModule
+from src.mybootstrap_core_itskovichanton.app import Application
+from src.mybootstrap_core_itskovichanton.di import CoreModule
 from tests.app import TestCoreApp
 
 

@@ -5,7 +5,7 @@ from typing import Protocol
 import httpx
 from dacite import from_dict
 
-from src.bootstrapcore_itskovichanton.config import ConfigService
+from src.mybootstrap_core_itskovichanton.config import ConfigService
 
 
 @dataclass

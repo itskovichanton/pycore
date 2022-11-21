@@ -1,7 +1,7 @@
 
-from src.bootstrapcore_itskovichanton.alerts import AlertService, alert_on_fail, Alert
-from src.bootstrapcore_itskovichanton.app import Application
-from src.bootstrapcore_itskovichanton.config import ConfigService
+from src.mybootstrap_core_itskovichanton.alerts import AlertService, alert_on_fail, Alert
+from src.mybootstrap_core_itskovichanton.app import Application
+from src.mybootstrap_core_itskovichanton.config import ConfigService
 
 
 class TestCoreApp(Application):
