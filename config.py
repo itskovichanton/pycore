@@ -36,6 +36,9 @@ class Config:
     def full_name(self):
         return f"{self.app.full_name()}-[{self.profile}]"
 
+    def is_prod(self):
+        return self.profile == "prod"
+
 
 class ConfigLoaderService(Protocol):
     def load(self) -> Config:

@@ -25,6 +25,9 @@ class AlertService(Protocol):
     async def send(self, a: Alert):
         """Send alert"""
 
+    async def handle(self, e: BaseException, alert: Alert = Alert()):
+        """Send alert about exception"""
+
 
 alert_service: AlertService
 
@@ -38,7 +41,7 @@ class AlertServiceImpl(AlertService):
         global alert_service
         alert_service = self
         self.emails = self.config_service.config.settings["alerts"]["emails"]
-        self.fromEmail = self.config_service.config.settings["email"]["from"]
+        self.from_email = self.config_service.config.settings["email"]["from"]
 
     async def send(self, a: Alert):
         if not a.send:
@@ -61,7 +64,13 @@ class AlertServiceImpl(AlertService):
 
     def send_by_email(self, a):
         self.email_service.send(
-            Params(subject=a.subject, toEmail=self.emails, senderEmail=self.fromEmail, content_plain=a.message))
+            Params(subject=a.subject, toEmail=self.emails, senderEmail=self.from_email, content_plain=a.message))
+
+    async def handle(self, e: BaseException, alert: Alert = Alert()):
+        logging.exception(e)
+        alert.message = traceback.format_exc()
+        alert.subject = "Exception"
+        await self.send(alert)
 
 
 def alert_on_fail(method, alert: Alert = Alert()):
@@ -70,9 +79,6 @@ def alert_on_fail(method, alert: Alert = Alert()):
         try:
             return await method(self, *method_args, **method_kwargs)
         except BaseException as e:
-            logging.exception(e)
-            alert.message = traceback.format_exc()
-            alert.subject = "Exception"
-            await alert_service.send(alert)
+            await alert_service.handle(e, alert)
 
     return _impl

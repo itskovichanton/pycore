@@ -22,7 +22,7 @@ class EmailConfig:
 
 @dataclass
 class Params:
-    toEmail: list
+    toEmail: list[str]
     senderEmail: str
     subject: str
     content_plain: str = ""
