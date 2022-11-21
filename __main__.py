@@ -1,20 +1,6 @@
-import asyncio
-
-from app import Application
-from di import injector
-
-
-async def main() -> None:
-    app = injector.inject(Application)
-    await app.async_run()
-    # app.run()
-
-
-if __name__ == '__main__':
-    # main()
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        pass
+from alerts import AlertService, AlertServiceImpl
+from config import ConfigService, ConfigServiceImpl
+from email_service import EmailService, EmailServiceImpl
+from fr import FRConfig, FRService, FRServiceImpl
+from di import CoreModule
+from utils import trim_string
