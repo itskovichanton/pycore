@@ -1,9 +1,9 @@
 from opyoid import Module, Injector
 
-from alerts import AlertService, AlertServiceImpl
-from config import YamlConfigLoaderService, ConfigLoaderService, ConfigService, ConfigServiceImpl
-from email_service import EmailServiceImpl, EmailService
-from fr import FRService, FRServiceImpl
+from src.bootstrapcore_itskovichanton.alerts import AlertService, AlertServiceImpl
+from src.bootstrapcore_itskovichanton.config import YamlConfigLoaderService, ConfigLoaderService, ConfigService, ConfigServiceImpl
+from src.bootstrapcore_itskovichanton.email_service import EmailServiceImpl, EmailService
+from src.bootstrapcore_itskovichanton.fr import FRService, FRServiceImpl
 
 
 class CoreModule(Module):

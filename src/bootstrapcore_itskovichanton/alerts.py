@@ -4,10 +4,10 @@ import traceback
 from dataclasses import dataclass
 from typing import Protocol
 
-from config import ConfigService
-from email_service import EmailService, Params
-from fr import FRService, Post
-from utils import trim_string
+from src.bootstrapcore_itskovichanton.config import ConfigService
+from src.bootstrapcore_itskovichanton.email_service import EmailService, Params
+from src.bootstrapcore_itskovichanton.fr import FRService, Post
+from src.bootstrapcore_itskovichanton.utils import trim_string
 
 
 @dataclass

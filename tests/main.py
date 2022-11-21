@@ -1,7 +1,7 @@
 import asyncio
 
-from app import Application
-from di import injector
+from src.bootstrapcore_itskovichanton.app import Application
+from tests.di import injector
 
 
 async def main() -> None:

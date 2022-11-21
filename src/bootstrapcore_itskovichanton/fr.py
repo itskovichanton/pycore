@@ -1,10 +1,11 @@
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import Protocol
 
 import httpx
 from dacite import from_dict
 
-from config import ConfigService
+from src.bootstrapcore_itskovichanton.config import ConfigService
 
 
 @dataclass
@@ -36,6 +37,6 @@ class FRServiceImpl(FRService):
     async def send(self, a: Post):
         if self.config is None:
             return
-        r = await self.http_client.post(self.config.url + "/postMsg",
+        with suppress(BaseException):
+            await self.http_client.post(self.config.url + "/postMsg",
                                         data={'msg': a.msg, 'project': a.project, 'level': a.level})
-        print(r.json())

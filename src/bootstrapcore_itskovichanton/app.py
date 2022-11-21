@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from config import ConfigService
+from src.bootstrapcore_itskovichanton.config import ConfigService
 
 
 class Application(Protocol):

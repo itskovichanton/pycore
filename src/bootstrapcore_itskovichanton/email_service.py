@@ -7,7 +7,7 @@ from typing import Protocol
 
 from dacite import from_dict
 
-from config import ConfigService
+from src.bootstrapcore_itskovichanton.config import ConfigService
 
 
 @dataclass
