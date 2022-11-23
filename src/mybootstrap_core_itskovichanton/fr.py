@@ -6,6 +6,7 @@ import httpx
 from dacite import from_dict
 
 from src.mybootstrap_core_itskovichanton.config import ConfigService
+from src.mybootstrap_core_itskovichanton.ioc import bean
 
 
 @dataclass
@@ -27,10 +28,12 @@ class FRService(Protocol):
         """Send post to fr"""
 
 
+@bean
 class FRServiceImpl(FRService):
+    config_service: ConfigService
 
-    def __init__(self, config_service: ConfigService):
-        fr_settings = config_service.config.settings["fr"]
+    def post_construct(self):
+        fr_settings = self.config_service.config.settings["fr"]
         self.config = from_dict(data_class=FRConfig, data=fr_settings)
         self.http_client = httpx.AsyncClient()
 

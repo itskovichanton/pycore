@@ -7,6 +7,7 @@ from typing import Protocol
 from src.mybootstrap_core_itskovichanton.config import ConfigService
 from src.mybootstrap_core_itskovichanton.email_service import EmailService, Params
 from src.mybootstrap_core_itskovichanton.fr import FRService, Post
+from src.mybootstrap_core_itskovichanton.ioc import bean
 from src.mybootstrap_core_itskovichanton.utils import trim_string
 
 
@@ -32,14 +33,13 @@ class AlertService(Protocol):
 alert_service: AlertService
 
 
+@bean
 class AlertServiceImpl(AlertService):
+    config_service: ConfigService
+    fr_service: FRService
+    email_service: EmailService
 
-    def __init__(self, config_service: ConfigService, fr_service: FRService, email_service: EmailService):
-        self.config_service = config_service
-        self.fr_service = fr_service
-        self.email_service = email_service
-        global alert_service
-        alert_service = self
+    def post_construct(self):
         self.emails = self.config_service.config.settings["alerts"]["emails"]
         self.from_email = self.config_service.config.settings["email"]["from"]
 

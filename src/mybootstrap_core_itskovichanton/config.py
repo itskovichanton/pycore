@@ -5,6 +5,8 @@ from typing import Protocol, Optional
 import yaml
 from dacite import from_dict
 
+from src.mybootstrap_core_itskovichanton.ioc import bean
+
 
 class ConfigService(Protocol):
 
@@ -65,11 +67,12 @@ class YamlConfigLoaderService(ConfigLoaderService):
         return r
 
 
+@bean
 class ConfigServiceImpl(ConfigService):
+    config_loader: ConfigLoaderService
 
-    def __init__(self, config_loader: ConfigLoaderService):
-        super().__init__()
-        self.config = config_loader.load()
+    def post_construct(self):
+        self.config = self.config_loader.load()
         self.dir()
 
     def app_name(self) -> str:

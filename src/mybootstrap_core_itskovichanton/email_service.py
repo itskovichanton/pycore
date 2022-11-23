@@ -8,6 +8,7 @@ from typing import Protocol
 from dacite import from_dict
 
 from src.mybootstrap_core_itskovichanton.config import ConfigService
+from src.mybootstrap_core_itskovichanton.ioc import bean
 
 
 @dataclass
@@ -35,10 +36,12 @@ class EmailService(Protocol):
         """Send email"""
 
 
+@bean
 class EmailServiceImpl(EmailService):
+    config_service: ConfigService
 
-    def __init__(self, config_service: ConfigService):
-        email_settings = config_service.config.settings["email"]
+    def post_construct(self):
+        email_settings = self.config_service.config.settings["email"]
         self.config = from_dict(data_class=EmailConfig, data=email_settings)
 
     def send(self, a: Params):
