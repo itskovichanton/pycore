@@ -49,7 +49,7 @@ class ConfigLoaderService(Protocol):
         """Loads config instance"""
 
 
-@bean(filename="config-file")
+@bean(filename=("config-file", str, "config.yml"))
 class YamlConfigLoaderServiceImpl(ConfigLoaderService):
 
     def load(self) -> Config:
