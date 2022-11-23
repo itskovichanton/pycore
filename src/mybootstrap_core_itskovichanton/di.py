@@ -16,8 +16,12 @@ class CoreModule(BaseModule):
         self.bind(AsyncClient)
 
 
+config_service: ConfigService
+
+
 def init(modules: List[Union[AbstractModule, Type[AbstractModule]]] = None) -> Injector:
     injector = Injector(modules)
+    global config_service
     config_service = injector.inject(ConfigService)
     append_benedict(ioc.context.properties, config_service.config.settings)
     alerts.alert_service = injector.inject(AlertService)
