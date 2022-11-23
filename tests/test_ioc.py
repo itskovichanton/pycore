@@ -1,6 +1,5 @@
-from typing import Protocol
+from typing import Protocol, Any
 
-from src.mybootstrap_core_itskovichanton.config import ConfigService
 from src.mybootstrap_core_itskovichanton.ioc import bean
 
 
@@ -11,19 +10,16 @@ class AbstractBean(Protocol):
 @bean(no_polymorph=True)
 class OtherBean(AbstractBean):
 
-    def post_construct(self):
+    def init(self):
         print("OtherBean Constructed")
 
 
-@bean(no_polymorph=True)
+@bean(no_polymorph=True, p1="qcb", p2="email.encoding", p4=("a.b.c.d", None, {"x": 1, "y": 2}))
 class MyBean(AbstractBean):
-    config_service: ConfigService
     other_bean: OtherBean
-    url: str = None
 
-    def post_construct(self):
-        self.profile = self.config_service.config.profile
+    def init(self, **kwargs):
         print("MyBean Constructed")
 
     def info(self) -> str:
-        return self.config_service.config.profile
+        return f"info() = {self.p4}"

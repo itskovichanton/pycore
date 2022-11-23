@@ -5,9 +5,6 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Protocol
 
-from dacite import from_dict
-
-from src.mybootstrap_core_itskovichanton.config import ConfigService
 from src.mybootstrap_core_itskovichanton.ioc import bean
 
 
@@ -36,13 +33,8 @@ class EmailService(Protocol):
         """Send email"""
 
 
-@bean
+@bean(config=("email", EmailConfig))
 class EmailServiceImpl(EmailService):
-    config_service: ConfigService
-
-    def post_construct(self):
-        email_settings = self.config_service.config.settings["email"]
-        self.config = from_dict(data_class=EmailConfig, data=email_settings)
 
     def send(self, a: Params):
         if self.config is None and not a.content_plain and not a.content_html:

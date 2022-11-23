@@ -33,15 +33,11 @@ class AlertService(Protocol):
 alert_service: AlertService
 
 
-@bean
+@bean(emails="alerts.emails", from_email="email.from")
 class AlertServiceImpl(AlertService):
     config_service: ConfigService
     fr_service: FRService
     email_service: EmailService
-
-    def post_construct(self):
-        self.emails = self.config_service.config.settings["alerts"]["emails"]
-        self.from_email = self.config_service.config.settings["email"]["from"]
 
     async def send(self, a: Alert):
         if not a.send:

@@ -16,7 +16,7 @@ email:
   encoding: utf-8
 
 fr:
-  url: http://10.1.2.108:8091
+  url: http://10.1.2.103:8091
   developer_id: 106567582
 
 sh:

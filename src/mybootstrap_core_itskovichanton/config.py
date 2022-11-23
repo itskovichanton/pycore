@@ -4,6 +4,7 @@ from typing import Protocol, Optional
 
 import yaml
 from dacite import from_dict
+from benedict import benedict
 
 from src.mybootstrap_core_itskovichanton.ioc import bean
 
@@ -32,7 +33,7 @@ class App:
 @dataclass
 class Config:
     app: App
-    settings: Optional[dict]
+    settings: Optional[benedict]
     profile: Optional[str]
 
     def full_name(self):
@@ -61,7 +62,7 @@ class YamlConfigLoaderService(ConfigLoaderService):
                 settings[k] = v
             r = from_dict(data_class=Config, data=settings)
             settings.pop(self.profile)
-            r.settings = settings
+            r.settings = benedict(settings)
             r.profile = self.profile
 
         return r
@@ -71,7 +72,7 @@ class YamlConfigLoaderService(ConfigLoaderService):
 class ConfigServiceImpl(ConfigService):
     config_loader: ConfigLoaderService
 
-    def post_construct(self):
+    def init(self):
         self.config = self.config_loader.load()
         self.dir()
 

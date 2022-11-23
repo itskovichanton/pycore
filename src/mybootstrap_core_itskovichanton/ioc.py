@@ -2,10 +2,15 @@ import functools
 from dataclasses import dataclass
 from typing import Type, Optional, Any
 
-from opyoid import Module, Injector, SingletonScope
+from benedict import benedict
+from opyoid import Injector, SingletonScope, Module
 from opyoid.scopes import Scope
 
-from src.mybootstrap_core_itskovichanton.utils import omittable_parentheses
+from src.mybootstrap_core_itskovichanton.utils import infer_from_tuple, omittable_parentheses
+
+settings: benedict
+profile: str
+config_service: None
 
 
 @dataclass
@@ -19,19 +24,24 @@ class _beanPrefs:
 beans: dict[Any, list[_beanPrefs]] = {}
 
 
-def _create_bean_init(method):
+def _create_bean_init(method, **kwargs):
     @functools.wraps(method)
     def _impl(self, *method_args, **method_kwargs):
         r = method(self, *method_args, **method_kwargs)
-        if self.post_construct:
-            self.post_construct()
+        for k, v in kwargs.items():
+            v = infer_from_tuple(settings, v)
+            kwargs[k] = v
+            setattr(self, k, v)
+
+        if hasattr(self, 'init') and callable(self.init):
+            self.init(**kwargs)
         return r
 
     return _impl
 
 
 @omittable_parentheses(allow_partial=True)
-def bean(scope: Type[Scope] = None, named: Optional[str] = None, no_polymorph: bool = False):
+def bean(scope: Type[Scope] = None, named: Optional[str] = None, no_polymorph: bool = False, **kwargs):
     def discover(cl):
         print(f"Bean discovered: {cl}")
         if cl and hasattr(cl, "__bases__"):
@@ -39,7 +49,7 @@ def bean(scope: Type[Scope] = None, named: Optional[str] = None, no_polymorph: b
             prefs = _beanPrefs(to_class=cl, scope=scope, named=named, no_polymorph=no_polymorph)
             for base in cl.__bases__:
                 beans.setdefault(base, []).append(prefs)
-            cl.__init__ = _create_bean_init(cl.__init__)
+            cl.__init__ = _create_bean_init(cl.__init__, **kwargs)
         return cl
 
     return discover
