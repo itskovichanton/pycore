@@ -1,4 +1,4 @@
-from typing import Protocol, Any
+from typing import Protocol
 
 from src.mybootstrap_core_itskovichanton.ioc import bean
 
@@ -23,3 +23,30 @@ class MyBean(AbstractBean):
 
     def info(self) -> str:
         return f"info() = {self.p4}"
+
+
+class AbstractService:
+    def do_smth(self):
+        pass
+
+
+@bean(profile="prod", appdata_env="APPDATA")
+class ProdService(AbstractService):
+    other_bean: OtherBean
+
+    def init(self, **kwargs):
+        print("ProdBean Constructed")
+
+    def do_smth(self):
+        print(f"I am ProdBean and i'm working! {self.appdata_env}")
+
+
+@bean(profile="dev")
+class DevService(AbstractService):
+    other_bean: OtherBean
+
+    def init(self, **kwargs):
+        print("DevBean Constructed")
+
+    def do_smth(self):
+        print("I am DevBean and i'm working!")

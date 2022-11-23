@@ -26,7 +26,7 @@ class FRService(Protocol):
         """Send post to fr"""
 
 
-@bean(config=('fr', FRConfig))
+@bean(config=("fr", FRConfig))
 class FRServiceImpl(FRService):
     http_client: AsyncClient
 

@@ -33,7 +33,7 @@ class EmailService(Protocol):
         """Send email"""
 
 
-@bean(config=("email", EmailConfig))
+@bean(config=("email", EmailConfig, None))
 class EmailServiceImpl(EmailService):
 
     def send(self, a: Params):

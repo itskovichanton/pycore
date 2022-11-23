@@ -1,4 +1,7 @@
+import argparse
 import functools
+from collections import abc
+from collections.abc import MutableMapping
 from inspect import isclass
 
 from benedict import benedict
@@ -59,3 +62,58 @@ def infer_from_tuple(b: benedict, args):
     if type(args) is str:
         return infer(b, args)
     return None
+
+
+def create_benedict(a: dict) -> benedict:
+    r = benedict()
+    b = flatten_dict(a)
+    for k, v in b.items():
+        if "." in k:
+            keys = k.split(".")
+            if len(keys) == 1:
+                k = keys[0]
+        r[k] = v
+    return r
+
+
+def append_benedict(r: benedict, b: benedict):
+    b = flatten_dict(b)
+    for k, v in b.items():
+        if "." in k:
+            keys = k.split(".")
+            if len(keys) == 1:
+                k = keys[0]
+        r[k] = v
+    return r
+
+
+class StoreInDict(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        d = getattr(namespace, self.dest)
+        for opt in values:
+            k, v = opt.split("=", 1)
+            k = k.lstrip("-")
+            if k in d:
+                d[k].append(v)
+            else:
+                d[k] = v
+        setattr(namespace, self.dest, d)
+
+
+def nested_dict_iter(nested):
+    for key, value in nested.items():
+        if isinstance(value, abc.Mapping):
+            yield from nested_dict_iter(value)
+        else:
+            yield key, value
+
+
+def flatten_dict(d: MutableMapping, parent_key: str = '', sep: str = '.') -> MutableMapping:
+    items = []
+    for k, v in d.items():
+        new_key = parent_key + sep + k if parent_key else k
+        if isinstance(v, MutableMapping):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)

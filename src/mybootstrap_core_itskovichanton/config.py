@@ -3,10 +3,11 @@ from dataclasses import dataclass
 from typing import Protocol, Optional
 
 import yaml
-from dacite import from_dict
 from benedict import benedict
+from dacite import from_dict
 
 from src.mybootstrap_core_itskovichanton.ioc import bean
+from src.mybootstrap_core_itskovichanton.utils import create_benedict
 
 
 class ConfigService(Protocol):
@@ -48,22 +49,20 @@ class ConfigLoaderService(Protocol):
         """Loads config instance"""
 
 
-class YamlConfigLoaderService(ConfigLoaderService):
-
-    def __init__(self, filename: str, profile: str):
-        self.filename = filename
-        self.profile = profile
+@bean(filename="config-file")
+class YamlConfigLoaderServiceImpl(ConfigLoaderService):
 
     def load(self) -> Config:
         with open(self.filename) as f:
             settings: dict = yaml.load(f, Loader=yaml.FullLoader)
-            profile_settings = settings[self.profile]
+            profile = self._context.profile
+            profile_settings = settings[profile]
             for k, v in profile_settings.items():
                 settings[k] = v
             r = from_dict(data_class=Config, data=settings)
-            settings.pop(self.profile)
-            r.settings = benedict(settings)
-            r.profile = self.profile
+            settings.pop(profile)
+            r.settings = create_benedict(settings)
+            r.profile = profile
 
         return r
 
@@ -72,7 +71,7 @@ class YamlConfigLoaderService(ConfigLoaderService):
 class ConfigServiceImpl(ConfigService):
     config_loader: ConfigLoaderService
 
-    def init(self):
+    def init(self, **kwargs):
         self.config = self.config_loader.load()
         self.dir()
 

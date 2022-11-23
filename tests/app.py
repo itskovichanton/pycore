@@ -1,20 +1,22 @@
 from src.mybootstrap_core_itskovichanton.alerts import AlertService, alert_on_fail, Alert
 from src.mybootstrap_core_itskovichanton.app import Application
 from src.mybootstrap_core_itskovichanton.config import ConfigService
-from tests.test_ioc import AbstractBean, MyBean
+from src.mybootstrap_core_itskovichanton.ioc import bean
+from tests.test_ioc import AbstractService, MyBean
 
 
+@bean
 class TestCoreApp(Application):
-
-    def __init__(self, config_service: ConfigService, alert_service: AlertService, mybean: MyBean):
-        super().__init__(config_service)
-        self.alert_service = alert_service
-        self.mybean = mybean
+    service: AbstractService
+    alert_service: AlertService
+    config_service: ConfigService
+    mybean: MyBean
 
     def run(self):
         print(self.config_service.app_name())
 
     async def async_run(self):
+        self.service.do_smth()
         print(self.config_service.app_name())
         print(self.mybean.info())
         # self.http_controller.start()

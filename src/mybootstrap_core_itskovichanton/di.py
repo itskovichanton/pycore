@@ -2,19 +2,17 @@ from httpx import AsyncClient
 from opyoid import Injector
 
 from src.mybootstrap_core_itskovichanton import ioc
-from src.mybootstrap_core_itskovichanton.config import YamlConfigLoaderService, ConfigLoaderService, ConfigService
+from src.mybootstrap_core_itskovichanton.config import ConfigService
 from src.mybootstrap_core_itskovichanton.ioc import BaseModule
+from src.mybootstrap_core_itskovichanton.utils import append_benedict
 
 
 class CoreModule(BaseModule):
     def configure(self) -> None:
         super().configure()
-
         self.bind(AsyncClient)
-        self.bind(ConfigLoaderService, to_instance=YamlConfigLoaderService("config.yml", "dev"))
 
 
 injector = Injector([CoreModule])
 config_service = injector.inject(ConfigService)
-ioc.settings = config_service.config.settings
-ioc.profile = config_service.config.profile
+append_benedict(ioc.context.properties, config_service.config.settings)
