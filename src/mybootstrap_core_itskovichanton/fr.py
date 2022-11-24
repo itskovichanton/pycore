@@ -3,8 +3,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from httpx import AsyncClient
-
-from src.mybootstrap_core_itskovichanton.ioc import bean
+from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
 
 @dataclass

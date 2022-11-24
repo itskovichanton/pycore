@@ -5,9 +5,8 @@ from typing import Protocol, Optional
 import yaml
 from benedict import benedict
 from dacite import from_dict
-
-from src.mybootstrap_core_itskovichanton.ioc import bean
-from src.mybootstrap_core_itskovichanton.utils import create_benedict
+from src.mybootstrap_ioc_itskovichanton.ioc import bean
+from src.mybootstrap_ioc_itskovichanton.utils import create_benedict
 
 
 class ConfigService(Protocol):

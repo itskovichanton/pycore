@@ -5,7 +5,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Protocol
 
-from src.mybootstrap_core_itskovichanton.ioc import bean
+from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
 
 @dataclass

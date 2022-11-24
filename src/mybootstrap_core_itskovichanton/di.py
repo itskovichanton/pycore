@@ -2,12 +2,13 @@ from typing import List, Union, Type
 
 from httpx import AsyncClient
 from opyoid import Injector, AbstractModule
+from src.mybootstrap_ioc_itskovichanton import ioc
+from src.mybootstrap_ioc_itskovichanton.ioc import BaseModule
+from src.mybootstrap_ioc_itskovichanton.utils import append_benedict
 
-from src.mybootstrap_core_itskovichanton import ioc, alerts
+from src.mybootstrap_core_itskovichanton import alerts
 from src.mybootstrap_core_itskovichanton.alerts import AlertService
 from src.mybootstrap_core_itskovichanton.config import ConfigService
-from src.mybootstrap_core_itskovichanton.ioc import BaseModule
-from src.mybootstrap_core_itskovichanton.utils import append_benedict
 
 
 class CoreModule(BaseModule):

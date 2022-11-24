@@ -1,11 +1,12 @@
+from src.mybootstrap_ioc_itskovichanton.ioc import bean
+
 from src.mybootstrap_core_itskovichanton.alerts import AlertService, alert_on_fail, Alert
 from src.mybootstrap_core_itskovichanton.app import Application
 from src.mybootstrap_core_itskovichanton.config import ConfigService
-from src.mybootstrap_core_itskovichanton.ioc import bean
 from tests.test_ioc import AbstractService, MyBean
 
 
-@bean
+@bean(no_polymorph=True)
 class TestCoreApp(Application):
     service: AbstractService
     alert_service: AlertService

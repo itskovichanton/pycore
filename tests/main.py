@@ -1,11 +1,12 @@
 import asyncio
 
 from src.mybootstrap_core_itskovichanton.app import Application
+from tests.app import TestCoreApp
 from tests.di import injector
 
 
 async def main() -> None:
-    app = injector.inject(Application)
+    app = injector.inject(TestCoreApp)
     await app.async_run()
     # app.run()
 

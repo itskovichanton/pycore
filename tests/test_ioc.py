@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from src.mybootstrap_core_itskovichanton.ioc import bean
+from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
 
 class AbstractBean(Protocol):
