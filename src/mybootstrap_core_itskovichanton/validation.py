@@ -37,7 +37,7 @@ def check_float(param: str, value, message="Некорректное float-зн�
                                   validation_reason=VALIDATION_REASON_INVALID_FLOAT, cause=e)
 
 
-def check_empty(param: str, value, message: str = "Параметр не может содержать пустое значение"):
+def check_not_empty(param: str, value, message: str = "Параметр не может содержать пустое значение"):
     if not value:
         raise ValidationException(message=message, invalid_value=value, param=param,
                                   validation_reason=VALIDATION_REASON_EMPTY)
