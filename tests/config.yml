@@ -22,6 +22,11 @@ fr:
 sh:
   executor: C:\Program Files\Git\bin\bash.exe
 
+loggers:
+  my:
+    backup_count: 3
+
+
 prod:
   qcb:
     version: 1

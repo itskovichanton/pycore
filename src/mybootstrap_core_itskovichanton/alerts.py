@@ -7,7 +7,7 @@ from typing import Protocol
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
 from src.mybootstrap_core_itskovichanton.config import ConfigService
-from src.mybootstrap_core_itskovichanton.email_service import EmailService, Params
+from src.mybootstrap_core_itskovichanton.email import EmailService, Params
 from src.mybootstrap_core_itskovichanton.fr import FRService, Post
 from src.mybootstrap_core_itskovichanton.utils import trim_string
 

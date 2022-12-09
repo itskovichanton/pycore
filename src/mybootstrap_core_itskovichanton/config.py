@@ -14,7 +14,7 @@ class ConfigService(Protocol):
     def __init__(self):
         self.config = None
 
-    def dir(self) -> str:
+    def dir(self, *args) -> str:
         """App directory"""
 
     def app_name(self) -> str:
@@ -77,12 +77,7 @@ class ConfigServiceImpl(ConfigService):
     def app_name(self) -> str:
         return self.config.full_name()
 
-    def dir(self) -> str:
-        r = os.path.join(self.config.app.full_name(), "work", self.config.profile)
+    def dir(self, *args) -> str:
+        r = os.path.join(self.config.app.full_name(), "work", self.config.profile, *args)
         os.makedirs(r, exist_ok=True)
         return r
-
-    # def on_dir(self, *args) -> str:
-    #     r = os.path.join(self.dir(), list(args))
-    #     os.makedirs(r, exist_ok=True)
-    #     return r
