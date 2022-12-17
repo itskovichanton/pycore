@@ -48,11 +48,11 @@ class ConfigLoaderService(Protocol):
         """Loads config instance"""
 
 
-@bean(filename=("config-file", str, "config.yml"))
+@bean(filename=("config-file", str, "config.yml"), encoding=("config-file.encoding", str, "utf-8"))
 class YamlConfigLoaderServiceImpl(ConfigLoaderService):
 
     def load(self) -> Config:
-        with open(self.filename) as f:
+        with open(self.filename, encoding=self.encoding) as f:
             settings: dict = yaml.load(f, Loader=yaml.FullLoader)
             profile = self._context.profile
             profile_settings = settings[profile]
@@ -66,7 +66,7 @@ class YamlConfigLoaderServiceImpl(ConfigLoaderService):
         return r
 
 
-@bean
+@bean(workdir=("workdir", str, ""))
 class ConfigServiceImpl(ConfigService):
     config_loader: ConfigLoaderService
 
@@ -78,6 +78,6 @@ class ConfigServiceImpl(ConfigService):
         return self.config.full_name()
 
     def dir(self, *args) -> str:
-        r = os.path.join(self.config.app.full_name(), "work", self.config.profile, *args)
+        r = os.path.join(self.workdir, self.config.app.full_name(), "work", self.config.profile, *args)
         os.makedirs(r, exist_ok=True)
         return r
