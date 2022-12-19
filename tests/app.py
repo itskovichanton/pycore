@@ -1,10 +1,13 @@
+import os
+
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
 from src.mybootstrap_core_itskovichanton.alerts import AlertService, alert_on_fail, Alert
 from src.mybootstrap_core_itskovichanton.app import Application
 from src.mybootstrap_core_itskovichanton.config import ConfigService
 from src.mybootstrap_core_itskovichanton.logger import LoggerService
-from tests.test_ioc import AbstractService, MyBean
+from src.mybootstrap_core_itskovichanton.shell import ShellService
+from test_ioc import AbstractService, MyBean
 
 
 @bean(no_polymorph=True)
@@ -13,12 +16,16 @@ class TestCoreApp(Application):
     alert_service: AlertService
     config_service: ConfigService
     logger_service: LoggerService
+    shell_service: ShellService
     mybean: MyBean
 
     def run(self):
         print(self.config_service.app_name())
 
     async def async_run(self):
+        self.cmd = os.path.join(self.config_service.dir("cmd"), "testbash.sh")
+        print(self.shell_service.execute(self.cmd, "hello"))
+        await self.do_stuff_with_errors()
         self.logger_service.get_file_logger("my").info({"a": 1})
         self.service.do_smth()
         print(self.config_service.app_name())
@@ -34,4 +41,4 @@ class TestCoreApp(Application):
 
     @alert_on_fail
     async def do_stuff_with_errors(self):
-        return f"{1 / 0}"
+        return self.shell_service.execute(self.cmd, "err")

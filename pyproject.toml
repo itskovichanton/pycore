@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "mybootstrap_core_itskovichanton"
 version = "0.0.3"
 authors = [
-    { name="Anton Itskovich", email="itskovichae@gmail.com" },
+    { name = "Anton Itskovich", email = "itskovichae@gmail.com" },
 ]
 description = "My bootstrap app engine core classes"
 readme = "README.md"

@@ -1,5 +1,6 @@
 import argparse
 import functools
+import os
 from collections import abc
 from collections.abc import MutableMapping
 from inspect import isclass
@@ -117,3 +118,7 @@ def flatten_dict(d: MutableMapping, parent_key: str = '', sep: str = '.') -> Mut
         else:
             items.append((new_key, v))
     return dict(items)
+
+
+def is_windows():
+    return os.name == 'nt'
