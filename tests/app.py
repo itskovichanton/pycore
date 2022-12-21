@@ -1,6 +1,7 @@
 import os
 
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
+from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException
 
 from src.mybootstrap_core_itskovichanton.alerts import AlertService, alert_on_fail, Alert
 from src.mybootstrap_core_itskovichanton.app import Application
@@ -8,6 +9,13 @@ from src.mybootstrap_core_itskovichanton.config import ConfigService
 from src.mybootstrap_core_itskovichanton.logger import LoggerService
 from src.mybootstrap_core_itskovichanton.shell import ShellService
 from test_ioc import AbstractService, MyBean
+
+
+def ignore_some_errors(e: BaseException) -> BaseException:
+    if isinstance(e, CoreException):
+        if e.reason == "ignored_reason":
+            return None
+    return e
 
 
 @bean(no_polymorph=True)
@@ -23,6 +31,8 @@ class TestCoreApp(Application):
         print(self.config_service.app_name())
 
     async def async_run(self):
+        self.alert_service.get_interceptors().append(ignore_some_errors)
+        await self.do_other_stuff_with_errors()
         self.cmd = os.path.join(self.config_service.dir("cmd"), "testbash.sh")
         print(self.shell_service.execute(self.cmd, "hello"))
         await self.do_stuff_with_errors()
@@ -42,3 +52,7 @@ class TestCoreApp(Application):
     @alert_on_fail
     async def do_stuff_with_errors(self):
         return self.shell_service.execute(self.cmd, "err")
+
+    @alert_on_fail
+    async def do_other_stuff_with_errors(self):
+        raise CoreException(message="don't tell me anything", reason="ignored_reason")

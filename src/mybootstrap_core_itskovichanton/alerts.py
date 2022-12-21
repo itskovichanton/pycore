@@ -2,9 +2,10 @@ import functools
 import logging
 import traceback
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, Callable
 
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
+from src.mybootstrap_ioc_itskovichanton.utils import default_dataclass_field
 
 from src.mybootstrap_core_itskovichanton.config import ConfigService
 from src.mybootstrap_core_itskovichanton.email import EmailService, Params
@@ -22,7 +23,13 @@ class Alert:
     send: bool = True
 
 
+ExceptionInterceptor = Callable[[BaseException], BaseException]
+
+
 class AlertService(Protocol):
+
+    def get_interceptors(self) -> list[ExceptionInterceptor]:
+        """Get interceptors"""
 
     async def send(self, a: Alert):
         """Send alert"""
@@ -39,6 +46,10 @@ class AlertServiceImpl(AlertService):
     config_service: ConfigService
     fr_service: FRService
     email_service: EmailService
+    _interceptors: list[ExceptionInterceptor] = default_dataclass_field([])
+
+    def get_interceptors(self) -> list[ExceptionInterceptor]:
+        return self._interceptors
 
     async def send(self, a: Alert):
         if not a.send:
@@ -64,10 +75,22 @@ class AlertServiceImpl(AlertService):
             Params(subject=a.subject, toEmail=self.emails, senderEmail=self.from_email, content_plain=a.message))
 
     async def handle(self, e: BaseException, alert: Alert = Alert()):
+        e = self._preprocess(e)
+        if not e:
+            return
+
         logging.exception(e)
-        alert.message = traceback.format_exc()
+        alert.message = "\n".join(traceback.format_exception(e))
         alert.subject = "Exception"
         await self.send(alert)
+
+    def _preprocess(self, e: BaseException) -> BaseException:
+        for interceptor in self._interceptors:
+            if interceptor:
+                e = interceptor(e)
+                if e is None:
+                    break
+        return e
 
 
 def alert_on_fail(method, alert: Alert = Alert()):
