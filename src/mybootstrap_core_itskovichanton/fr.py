@@ -2,7 +2,8 @@ from contextlib import suppress
 from dataclasses import dataclass
 from typing import Protocol
 
-from httpx import AsyncClient
+import requests
+from paprika import threaded
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
 
@@ -21,17 +22,17 @@ class Post:
 
 class FRService(Protocol):
 
-    async def send(self, a: Post):
+    def send(self, a: Post):
         """Send post to fr"""
 
 
 @bean(config=("fr", FRConfig))
 class FRServiceImpl(FRService):
-    http_client: AsyncClient
 
-    async def send(self, a: Post):
+    @threaded
+    def send(self, a: Post):
         if self.config is None:
             return
         with suppress(BaseException):
-            await self.http_client.post(self.config.url + "/postMsg",
-                                        data={'msg': a.msg, 'project': a.project, 'level': a.level})
+            requests.request("POST", self.config.url + "/postMsg",
+                             data={'msg': a.msg, 'project': a.project, 'level': a.level})

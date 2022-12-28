@@ -31,10 +31,10 @@ class AlertService(Protocol):
     def get_interceptors(self) -> list[ExceptionInterceptor]:
         """Get interceptors"""
 
-    async def send(self, a: Alert):
+    def send(self, a: Alert):
         """Send alert"""
 
-    async def handle(self, e: BaseException, alert: Alert = Alert()):
+    def handle(self, e: BaseException, alert: Alert = Alert()):
         """Send alert about exception"""
 
 
@@ -51,7 +51,7 @@ class AlertServiceImpl(AlertService):
     def get_interceptors(self) -> list[ExceptionInterceptor]:
         return self._interceptors
 
-    async def send(self, a: Alert):
+    def send(self, a: Alert):
         if not a.send:
             return
 
@@ -61,20 +61,22 @@ class AlertServiceImpl(AlertService):
         a.subject = f"{self.config_service.app_name()} - [{a.subject}]"
 
         if a.byFR:
-            await self.send_by_fr(a)
+            self.send_by_fr(a)
 
         if a.byEmail:
             pass
             # self.send_by_email(a)
 
-    async def send_by_fr(self, a):
-        await self.fr_service.send(Post(project=a.subject, level=a.level, msg=trim_string(a.message, 4000)))
+    def send_by_fr(self, a):
+        self.fr_service.send(Post(project=a.subject, level=a.level, msg=trim_string(a.message, 4000)))
 
     def send_by_email(self, a):
         self.email_service.send(
             Params(subject=a.subject, toEmail=self.emails, senderEmail=self.from_email, content_plain=a.message))
 
-    async def handle(self, e: BaseException, alert: Alert = Alert()):
+    def handle(self, e: BaseException, alert: Alert = Alert()):
+        if not alert:
+            return
         e = self._preprocess(e)
         if not e:
             return
@@ -82,7 +84,7 @@ class AlertServiceImpl(AlertService):
         logging.exception(e)
         alert.message = "\n".join(traceback.format_exception(e))
         alert.subject = "Exception"
-        await self.send(alert)
+        self.send(alert)
 
     def _preprocess(self, e: BaseException) -> BaseException:
         for interceptor in self._interceptors:
@@ -95,10 +97,10 @@ class AlertServiceImpl(AlertService):
 
 def alert_on_fail(method, alert: Alert = Alert()):
     @functools.wraps(method)
-    async def _impl(self, *method_args, **method_kwargs):
+    def _impl(*method_args, **method_kwargs):
         try:
-            return await method(self, *method_args, **method_kwargs)
+            return method(*method_args, **method_kwargs)
         except BaseException as e:
-            await alert_service.handle(e, alert)
+            alert_service.handle(e, alert)
 
     return _impl
