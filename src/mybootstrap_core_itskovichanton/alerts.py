@@ -95,12 +95,14 @@ class AlertServiceImpl(AlertService):
         return e
 
 
-def alert_on_fail(method, alert: Alert = Alert()):
+def alert_on_fail(method, alert: Alert = Alert(), supress: bool = False):
     @functools.wraps(method)
     def _impl(*method_args, **method_kwargs):
         try:
             return method(*method_args, **method_kwargs)
         except BaseException as e:
             alert_service.handle(e, alert)
+            if not supress:
+                raise e
 
     return _impl

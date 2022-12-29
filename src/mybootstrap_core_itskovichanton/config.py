@@ -9,18 +9,6 @@ from src.mybootstrap_ioc_itskovichanton.ioc import bean
 from src.mybootstrap_ioc_itskovichanton.utils import create_benedict
 
 
-class ConfigService(Protocol):
-
-    def __init__(self):
-        self.config = None
-
-    def dir(self, *args) -> str:
-        """App directory"""
-
-    def app_name(self) -> str:
-        """A Flyer can fly"""
-
-
 @dataclass
 class App:
     name: str
@@ -41,6 +29,21 @@ class Config:
 
     def is_prod(self):
         return self.profile == "prod"
+
+
+class ConfigService(Protocol):
+
+    def __init__(self):
+        self.config = None
+
+    def get_config(self) -> Config:
+        pass
+
+    def dir(self, *args) -> str:
+        """App directory"""
+
+    def app_name(self) -> str:
+        """A Flyer can fly"""
 
 
 class ConfigLoaderService(Protocol):
@@ -73,6 +76,9 @@ class ConfigServiceImpl(ConfigService):
     def init(self, **kwargs):
         self.config = self.config_loader.load()
         self.dir()
+
+    def get_config(self) -> Config:
+        return self.config
 
     def app_name(self) -> str:
         return self.config.full_name()
