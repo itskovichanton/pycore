@@ -9,6 +9,18 @@ from benedict import benedict
 from dacite import from_dict
 
 
+def get_attr(obj, path: str | list[str]):
+    if type(path) == str:
+        path = path.split(".")
+    for attr in path:
+        if len(attr) == 0:
+            continue
+        if not hasattr(obj, attr):
+            return None
+        obj = getattr(obj, attr)
+    return obj
+
+
 def trim_string(s: str, limit: int, ellips='…') -> str:
     if not s:
         return ""

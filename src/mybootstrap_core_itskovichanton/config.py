@@ -1,12 +1,11 @@
 import os
-from dataclasses import dataclass
-from typing import Protocol, Optional
-
 import yaml
 from benedict import benedict
 from dacite import from_dict
+from dataclasses import dataclass
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 from src.mybootstrap_ioc_itskovichanton.utils import create_benedict
+from typing import Protocol, Optional
 
 
 @dataclass
@@ -60,7 +59,11 @@ class YamlConfigLoaderServiceImpl(ConfigLoaderService):
             profile = self._context.profile
             profile_settings = settings[profile]
             for k, v in profile_settings.items():
-                settings[k] = v
+                s = settings.get(k)
+                if s:
+                    s.update(v)
+                else:
+                    settings[k] = v
             r = from_dict(data_class=Config, data=settings)
             settings.pop(profile)
             r.settings = create_benedict(settings)

@@ -8,8 +8,11 @@ from logging.handlers import TimedRotatingFileHandler
 from typing import Protocol
 
 from pythonjsonlogger import jsonlogger
-from src.mybootstrap_core_itskovichanton.config import ConfigService
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
+
+from src.mybootstrap_core_itskovichanton import alerts
+from src.mybootstrap_core_itskovichanton.alerts import Alert
+from src.mybootstrap_core_itskovichanton.config import ConfigService
 
 
 class LoggerService(Protocol):
@@ -53,7 +56,7 @@ class LoggerServiceImpl(LoggerService):
         return r
 
 
-def log(_logger, _desc=None, _func=None):
+def log(_logger, _desc=None, _func=None, _action=None, _alert=False):
     def log_decorator_info(func):
         @functools.wraps(func)
         def log_decorator_wrapper(self, *args, **kwargs):
@@ -74,11 +77,15 @@ def log(_logger, _desc=None, _func=None):
                 err_info = func(self, *args, **kwargs)
                 desc += f"; result={err_info!r}"
                 logger.info(desc)
+                if _alert:
+                    alerts.alert_service.send(Alert(subject=_action, message=desc))
             except BaseException as e:
                 err_info = "\n".join(traceback.format_exception(e))
                 desc += f"; error: {err_info!r}"
                 logger.error(desc)
-                raise
+                if _alert:
+                    alerts.alert_service.handle(e)
+                raise e
             return err_info
 
         return log_decorator_wrapper
