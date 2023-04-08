@@ -12,12 +12,12 @@ from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
 from src.mybootstrap_core_itskovichanton import alerts
 from src.mybootstrap_core_itskovichanton.alerts import Alert
-from src.mybootstrap_core_itskovichanton.config import ConfigService
+from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 
 
 class LoggerService(Protocol):
     def get_file_logger(self, name: str, encoding: str = "utf-8") -> Logger:
-        pass
+        ...
 
 
 class CustomJsonFormatter(jsonlogger.JsonFormatter):
@@ -77,12 +77,14 @@ def log(_logger, _desc=None, _func=None, _action=None, _alert=False):
                 err_info = func(self, *args, **kwargs)
                 desc += f"; result={err_info!r}"
                 logger.info(desc)
+                print(desc)
                 if _alert:
                     alerts.alert_service.send(Alert(subject=_action, message=desc))
             except BaseException as e:
                 err_info = "\n".join(traceback.format_exception(e))
                 desc += f"; error: {err_info!r}"
                 logger.error(desc)
+                print(desc)
                 if _alert:
                     alerts.alert_service.handle(e)
                 raise e

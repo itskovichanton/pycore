@@ -7,13 +7,13 @@ from typing import Protocol
 
 class ShellService(Protocol):
     def execute(self, *args, encoding: str = None, cwd=None):
-        pass
+        ...
 
     def popen(self, *args, encoding: str = None, cwd=None):
-        pass
+        ...
 
 
-@bean(executor="sh.executor", encoding=("sh.encoding", "str", "utf-8"))
+@bean(executor="sh.executor", encoding=("sh.encoding", str, "utf-8"))
 class ShellServiceImpl(ShellService):
 
     def popen(self, *args, encoding: str = None, cwd=None):

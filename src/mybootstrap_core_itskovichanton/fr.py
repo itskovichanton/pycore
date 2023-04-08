@@ -10,7 +10,7 @@ from src.mybootstrap_ioc_itskovichanton.ioc import bean
 @dataclass
 class FRConfig:
     url: str
-    developer_id: int
+    developer_id: str
 
 
 @dataclass

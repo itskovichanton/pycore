@@ -1,9 +1,9 @@
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException
 
-from src.mybootstrap_core_itskovichanton.alerts import AlertService
+from src.mybootstrap_core_itskovichanton.alerts import AlertService, alert_on_fail
 from src.mybootstrap_core_itskovichanton.app import Application
-from src.mybootstrap_core_itskovichanton.config import ConfigService
+from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_core_itskovichanton.logger import LoggerService, log
 from src.mybootstrap_core_itskovichanton.shell import ShellService
 from test_ioc import AbstractService, MyBean
@@ -36,9 +36,14 @@ class TestCoreApp(Application):
 
     def run(self):
         print(self.config_service.app_name())
-        self.do_stuff_with_errors(1, 2, c=3)
+        self.raise_err()
+        # self.do_stuff_with_errors(1, 2, c=3)
         self.alert_service.get_interceptors().append(ignore_some_errors)
         # do_other_stuff_with_errors(1, 2, 3, 4)
+
+    @alert_on_fail
+    def raise_err(self):
+        print(1/0)
 
     #  def _run(self):
     #     self.alert_service.get_interceptors().append(ignore_some_errors)
@@ -61,4 +66,4 @@ class TestCoreApp(Application):
 
     @log(_logger="tests", _desc=lambda args, kwargs: f"do stuff with {kwargs['c']}, 1st arg = {args[0]}")
     def do_stuff_with_errors(self, a, b, c=4):
-        return self.shell_service.execute(self.cmd, "err")
+        return self.shell_service.execute("echo hello")

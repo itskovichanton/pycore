@@ -1,9 +1,9 @@
 from app import TestCoreApp
-from di import injector
+from src.mybootstrap_core_itskovichanton.di import injector
 
 
 def main() -> None:
-    app = injector.inject(TestCoreApp)
+    app = injector().inject(TestCoreApp)
     # await app._run()
     app.run()
 

@@ -7,7 +7,7 @@ from typing import Protocol, Callable
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 from src.mybootstrap_ioc_itskovichanton.utils import default_dataclass_field
 
-from src.mybootstrap_core_itskovichanton.config import ConfigService
+from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_core_itskovichanton.email import EmailService, Params
 from src.mybootstrap_core_itskovichanton.fr import FRService, Post
 from src.mybootstrap_core_itskovichanton.utils import trim_string
@@ -64,7 +64,7 @@ class AlertServiceImpl(AlertService):
             self.send_by_fr(a)
 
         if a.byEmail:
-            pass
+            ...
             # self.send_by_email(a)
 
     def send_by_fr(self, a):

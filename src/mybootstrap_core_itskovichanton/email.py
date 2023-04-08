@@ -14,7 +14,7 @@ class EmailConfig:
     password: str
     host: str
     address: str
-    port: int
+    port: str
     encoding: str = "utf-8"
 
 
@@ -42,7 +42,7 @@ class EmailServiceImpl(EmailService):
 
         context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
         context.set_ciphers('DEFAULT@SECLEVEL=1')
-        server = smtplib.SMTP_SSL(self.config.host, self.config.port, context=context)
+        server = smtplib.SMTP_SSL(self.config.host, int(self.config.port), context=context)
         server.command_encoding = self.config.encoding
         server.login(self.config.username, self.config.password)
         m = MIMEMultipart()
