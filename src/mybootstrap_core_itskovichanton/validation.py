@@ -1,3 +1,5 @@
+from typing import Callable, Any
+
 from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException, ERR_REASON_VALIDATION
 
 VALIDATION_REASON_EMPTY = "EMPTY"
@@ -42,4 +44,12 @@ def check_not_empty(param: str, value, message: str = "Параметр не м�
     if not value:
         raise ValidationException(message=message, invalid_value=value, param=param,
                                   validation_reason=VALIDATION_REASON_EMPTY)
+    return value
+
+
+def check(param: str, value, condition: Callable[[Any], bool] | Any, validation_reason=VALIDATION_REASON_UNEXPECTABLE,
+          message: str = "Параметр указан неверно"):
+    if not (isinstance(condition, Callable) and condition(value) or condition):
+        raise ValidationException(message=message, invalid_value=value, param=param,
+                                  validation_reason=validation_reason)
     return value
