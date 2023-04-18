@@ -8,11 +8,11 @@ from logging.handlers import TimedRotatingFileHandler
 from typing import Protocol
 
 from pythonjsonlogger import jsonlogger
+from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
 from src.mybootstrap_core_itskovichanton import alerts
 from src.mybootstrap_core_itskovichanton.alerts import Alert
-from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 
 
 class LoggerService(Protocol):
@@ -54,6 +54,16 @@ class LoggerServiceImpl(LoggerService):
 
         r.inited = True
         return r
+
+
+def lg(logger, desc=None, action=None, alert=False):
+    s = ": ".join([action, desc])
+    if not isinstance(logger, logging.Logger):
+        logger = logging.getLogger(str(logger))
+    logger.info(s)
+    print(s)
+    if alert:
+        alerts.alert_service.send(Alert(subject=action, message=desc))
 
 
 def log(_logger, _desc=None, _func=None, _action=None, _alert=False):

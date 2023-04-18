@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 import requests
-from paprika import threaded
+from paprika import threaded, silent_catch
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
 
@@ -26,13 +26,15 @@ class FRService(Protocol):
         """Send post to fr"""
 
 
-@bean(config=("fr", FRConfig))
+@bean(url=("fr.url", str, None), developer_id=("fr.developer_id", str, None))
 class FRServiceImpl(FRService):
 
     @threaded
+    @silent_catch
     def send(self, a: Post):
-        if self.config is None:
-            return
+        # if not self.fr:
+        #     return
+
         with suppress(BaseException):
-            requests.request("POST", self.config.url + "/postMsg",
+            requests.request("POST", self.url + "/postMsg",
                              data={'msg': a.msg, 'project': a.project, 'level': a.level})
