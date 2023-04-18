@@ -32,8 +32,8 @@ class FRServiceImpl(FRService):
     @threaded
     @silent_catch
     def send(self, a: Post):
-        # if not self.fr:
-        #     return
+        if not self.url:
+            return
 
         with suppress(BaseException):
             requests.request("POST", self.url + "/postMsg",
