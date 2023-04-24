@@ -12,10 +12,11 @@ from logging import Logger
 from typing import Protocol
 
 from pythonjsonlogger import jsonlogger
-from src.mybootstrap_core_itskovichanton import alerts
-from src.mybootstrap_core_itskovichanton.alerts import Alert
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
+
+from src.mybootstrap_core_itskovichanton import alerts
+from src.mybootstrap_core_itskovichanton.alerts import Alert
 
 
 class LoggerService(Protocol):
@@ -113,7 +114,7 @@ def lg(logger, desc=None, action=None, alert=False):
         alerts.alert_service.send(Alert(subject=action, message=desc))
 
 
-def log(_logger, _desc=None, _func=None, _action=None, _alert=False):
+def log(_logger, _desc=None, _func=None, _action=None, _alert=False, _ignore_if_success=False):
     def log_decorator_info(func):
         @functools.wraps(func)
         def log_decorator_wrapper(self, *args, **kwargs):
@@ -135,10 +136,14 @@ def log(_logger, _desc=None, _func=None, _action=None, _alert=False):
             try:
                 err_info = func(self, *args, **kwargs)
                 desc += f"; result={err_info!r}"
-                logger.info(desc)
-                print(desc)
                 if _alert:
                     alerts.alert_service.send(Alert(subject=_action, message=desc))
+                if _ignore_if_success:
+                    return
+
+                logger.info(desc)
+                print(desc)
+
             except BaseException as e:
                 err_info = "\n".join(traceback.format_exception(e))
                 desc += f"; error: {err_info!r}"
