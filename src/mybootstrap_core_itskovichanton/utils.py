@@ -134,3 +134,14 @@ def flatten_dict(d: MutableMapping, parent_key: str = '', sep: str = '.') -> Mut
 
 def is_windows():
     return os.name == 'nt'
+
+
+def synchronized(lock):
+    def wrapper(f):
+        def inner(*args, **kwargs):
+            with lock:
+                return f(*args, **kwargs)
+
+        return inner
+
+    return wrapper
