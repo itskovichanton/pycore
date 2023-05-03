@@ -1,12 +1,27 @@
 import argparse
+import base64
+import dataclasses
+import decimal
 import functools
 import os
+import random
+import re
+import string
+import sys
+import uuid
 from collections import abc
 from collections.abc import MutableMapping
+from enum import Enum, EnumType
 from inspect import isclass
+from typing import Any, Callable, List, Set, Tuple
+from urllib.parse import urlparse, urlencode, urlunparse
 
 from benedict import benedict
 from dacite import from_dict
+from dataclasses_json import LetterCase, dataclass_json
+from dateutil.relativedelta import relativedelta
+
+from src.mybootstrap_core_itskovichanton.structures import CaseInsensitiveDict
 
 
 def get_attr(obj, path: str | list[str]):
@@ -104,12 +119,15 @@ class StoreInDict(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         d = getattr(namespace, self.dest)
         for opt in values:
-            k, v = opt.split("=", 1)
-            k = k.lstrip("-")
-            if k in d:
-                d[k].append(v)
-            else:
-                d[k] = v
+            try:
+                k, v = opt.split("=", 1)
+                k = k.lstrip("-")
+                if k in d:
+                    d[k].append(v)
+                else:
+                    d[k] = v
+            except:
+                ...
         setattr(namespace, self.dest, d)
 
 
@@ -145,3 +163,236 @@ def synchronized(lock):
         return inner
 
     return wrapper
+
+
+def remove_self_closed_xml_tags(s):
+    return re.sub("<[^>]+?/>", "", s)
+
+
+def generate_tag() -> str:
+    return str(uuid.uuid1().int)
+
+
+def replace_attrs(obj, filter_type,
+                  mapper: Callable[[Any, str, Any], Any],
+                  collection_mapper: Callable[[Any], Any] = lambda x: x,
+                  is_collection: Callable[[Any], bool] = lambda x: True):
+    if obj is None or isinstance(obj, Enum):
+        return obj
+    # print(type(obj), ": ")
+    if isinstance(obj, filter_type):
+        return mapper(obj, "self", obj)
+    if isinstance(obj, object):
+        try:
+            for attr, value in obj.__dict__.copy().items():
+                if value is None or attr.startswith("_"):
+                    continue
+                # print("\t", attr)
+                if isinstance(value, (List, Set, Tuple)) and is_collection(value):
+                    value = [replace_attrs(x, filter_type, mapper, collection_mapper, is_collection) for x in value]
+                    try:
+                        value = collection_mapper(value)
+                    except BaseException as e1:
+                        ...
+                        # print("attr: ", attr, "\terror: ", e1)
+                    setattr(obj, attr, value)
+                else:
+                    try:
+                        value = replace_attrs(value, filter_type, mapper, collection_mapper, is_collection)
+                        setattr(obj, attr, value)
+                    except BaseException as e1:
+                        # print("attr: ", attr, "\terror: ", e1)
+                        ...
+            return obj
+        except BaseException as e:
+            # print("out of for\t")
+            # print("error: ", e)
+            return obj
+    else:
+        return obj
+
+
+def list_to_map(obj):
+    r = dict()
+    for kv in obj:
+        r.update(kv)
+    return r
+
+
+def to_dict(obj, remove_none_values: bool = False):
+    try:
+        obj_dict = dict(obj)
+    except:
+        obj_dict = {}
+    r = obj.__dict__ if hasattr(obj, "__dict__") else obj_dict
+    if not r and obj_dict:
+        r = obj_dict
+    if remove_none_values:
+        r = {k: v for k, v in r.items() if v is not None}
+    return r
+
+
+def to_dict_deep(obj, route=(), key_mapper: Callable[[tuple, str], str] = lambda _, x: x,
+                 value_mapper: Callable[[tuple, Any], Any] = lambda _, x: x):
+    if (not obj) or isinstance(obj, (Enum, str, int, float)) or isclass(obj):
+        return value_mapper(route, obj)
+    r = {}
+    if isinstance(obj, CaseInsensitiveDict):
+        obj = dict(obj)
+    try:
+        for attr, value in to_dict(obj).items():
+            if value is None or attr.startswith("_"):
+                continue
+            new_route = (*route, attr)
+            attr = key_mapper(new_route, attr)
+            if isinstance(value, (List, Set, Tuple)):
+                value = [to_dict_deep(x, new_route, key_mapper, value_mapper) for x in value]
+                r.setdefault(attr, value)
+            else:
+                try:
+                    value = to_dict_deep(value, new_route, key_mapper, value_mapper)
+                    r.setdefault(attr, value)
+                except BaseException as e1:
+                    # print("attr: ", attr, "\terror: ", e1)
+                    ...
+        return r
+    except BaseException as e:
+        # print("out of for\t")
+        # print("error: ", e)
+        return value_mapper(route, obj)
+
+
+# https://stackoverflow.com/questions/7555335/how-to-convert-a-string-from-cp-1251-to-utf-8
+def win1251_to_utf8(s: str):
+    return s.encode("cp1251").decode('cp1251').encode('utf8')
+
+
+def utf8_to_win1251(s: str):
+    return s.encode("utf8").decode('utf8').encode('cp1251')
+
+
+def trim_string(s: str, limit: int, ellipsis='…') -> str:
+    s = s.strip()
+    if len(s) > limit:
+        return s[:limit - 1].strip() + ellipsis
+    return s
+
+
+def convert_to_int(s, default=0):
+    if not s:
+        return default
+    try:
+        i = int(s)
+    except ValueError as e:
+        i = default
+    return i
+
+
+def random_str(length: int):
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+
+
+# конструирует объект типа cl - со всеми рандомными полями
+def fill_random(cl, pkg=None, generators: dict[type, Callable[[], Any]] = None):
+    if not pkg:
+        pkg = cl.__module__
+
+    if hasattr(cl, "__forward_arg__"):
+        cl = cl.__forward_arg__
+
+    if type(cl) == str:
+        root = sys.modules[pkg]
+        for part in cl.split("."):
+            if hasattr(root, part):
+                root = getattr(root, part)
+        cl = root
+
+    if generators:
+        generator = generators.get(cl)
+        if generator:
+            return generator()
+
+    if cl == str:
+        return random_str(random.randint(0, 30))
+    if cl == bool:
+        return random.randint(0, 10) < 5
+    if cl in (float, int, decimal.Decimal):
+        return random.randint(1, int(10e+4))
+    if type(cl) == EnumType:
+        values = [e.value for e in cl]
+        return values[random.randint(0, len(values) - 1)]
+
+    o = cl()
+    print(cl)
+
+    if hasattr(cl, "__dataclass_fields__"):
+        for k, v in cl.__dataclass_fields__.items():
+            vtype = v.type
+            vtype_vars = vars(vtype)
+            vtype_name = vtype_vars.get("_name")
+            if not vtype_name:
+                setattr(o, k, fill_random(vtype, pkg, generators))
+                continue
+            vtype_args = vtype_vars.get("__args__")
+            unwrapped_type = vtype_args[0]
+            if vtype_name.upper() == "LIST":
+                setattr(o, k, [fill_random(unwrapped_type, pkg, generators) for _ in range(0, random.randint(5, 10))])
+            else:
+                setattr(o, k, fill_random(unwrapped_type, pkg, generators))
+
+    return o
+
+
+def concat_lists(l1, l2):
+    if l1 is None and l2 is None:
+        return None
+    if l1 is None:
+        l1 = []
+    if l2 is None:
+        l2 = []
+
+    return l1 + l2
+
+
+def get_basic_auth_header(username, password, add_basic: bool = True):
+    r = base64.b64encode(f"{username}:{password}".encode('utf-8')).decode("ascii")
+    if add_basic:
+        r = f"Basic {r}"
+    return r
+
+
+def find_by_key(d, k):
+    for a, b in d.items():
+        if a == k:
+            return b
+        if type(b) == dict:
+            return find_by_key(b, k)
+
+
+def to_dataclass(x, T):
+    field_names = set(f.name for f in dataclasses.fields(T))
+    r = T()
+    for k, v in x.__dict__.items():
+        setattr(r, k, v)
+    return r
+
+
+def last_day_of_month(date):
+    return date.replace(day=1) + relativedelta(months=1) - relativedelta(days=1)
+
+
+def js(cl, letter_case=LetterCase.CAMEL):
+    return dataclass_json(letter_case=letter_case)(dataclasses.dataclass(cl))
+
+
+def add_params_to_url(url, params):
+    url_parts = list(urlparse(url))
+    query = url_parts[4]
+    query = dict((k, v) for k, v in [p.split('=') for p in query.split('&')]) if query else {}
+    query.update(params)
+    url_parts[4] = urlencode(query)
+    return urlunparse(url_parts)
+
+
+def unescape_str(s: str):
+    return s.encode('raw_unicode_escape').decode('unicode_escape')

@@ -23,8 +23,9 @@ sh:
   executor: C:\Program Files\Git\bin\bash.exe
 
 loggers:
-  my:
-    backup_count: 3
+  tests:
+    backup_count: 30
+    when: s
 
 
 prod:

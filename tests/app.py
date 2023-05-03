@@ -1,3 +1,5 @@
+import time
+
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException
 
@@ -36,8 +38,13 @@ class TestCoreApp(Application):
 
     def run(self):
         print(self.config_service.app_name())
-        self.raise_err()
-        # self.do_stuff_with_errors(1, 2, c=3)
+        # self.raise_err()
+        i=0
+        while True:
+            self.do_stuff_with_errors(1, 2, c=i)
+            i+=1
+            time.sleep(1)
+
         self.alert_service.get_interceptors().append(ignore_some_errors)
         # do_other_stuff_with_errors(1, 2, 3, 4)
 
@@ -66,4 +73,5 @@ class TestCoreApp(Application):
 
     @log(_logger="tests", _desc=lambda args, kwargs: f"do stuff with {kwargs['c']}, 1st arg = {args[0]}")
     def do_stuff_with_errors(self, a, b, c=4):
-        return self.shell_service.execute("echo hello")
+        print(a)
+        return #self.shell_service.execute("echo hello")
