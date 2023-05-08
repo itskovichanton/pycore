@@ -70,6 +70,6 @@ class RedisService:
                 return result
 
             def clear(self):
-                self.rds.delete(hname)
+                self.rds.hdel(hname)
 
         return KVMap(rds=self.get())
