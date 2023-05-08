@@ -1,13 +1,16 @@
 import argparse
+import asyncio
 import base64
 import dataclasses
 import decimal
 import functools
+import hashlib
 import os
 import random
 import re
 import string
 import sys
+import time
 import uuid
 from collections import abc
 from collections.abc import MutableMapping
@@ -20,7 +23,6 @@ from benedict import benedict
 from dacite import from_dict
 from dataclasses_json import LetterCase, dataclass_json
 from dateutil.relativedelta import relativedelta
-
 from src.mybootstrap_core_itskovichanton.structures import CaseInsensitiveDict
 
 
@@ -173,6 +175,14 @@ def generate_tag() -> str:
     return str(uuid.uuid1().int)
 
 
+def generate_uid() -> str:
+    return str(uuid.uuid1())
+
+
+def md5(a: str):
+    return hashlib.md5(a.encode('utf-8')).hexdigest()
+
+
 def replace_attrs(obj, filter_type,
                   mapper: Callable[[Any, str, Any], Any],
                   collection_mapper: Callable[[Any], Any] = lambda x: x,
@@ -234,8 +244,10 @@ def to_dict(obj, remove_none_values: bool = False):
 
 def to_dict_deep(obj, route=(), key_mapper: Callable[[tuple, str], str] = lambda _, x: x,
                  value_mapper: Callable[[tuple, Any], Any] = lambda _, x: x):
-    if (not obj) or isinstance(obj, (Enum, str, int, float)) or isclass(obj):
+    if not isinstance(obj, dict) and ((not obj) or isinstance(obj, (Enum, str, int, float)) or isclass(obj)):
         return value_mapper(route, obj)
+    if isinstance(obj, (List, Set, Tuple)):
+        return [to_dict_deep(x, route, key_mapper, value_mapper) for x in list(obj)]
     r = {}
     if isinstance(obj, CaseInsensitiveDict):
         obj = dict(obj)
@@ -396,3 +408,46 @@ def add_params_to_url(url, params):
 
 def unescape_str(s: str):
     return s.encode('raw_unicode_escape').decode('unicode_escape')
+
+
+def async_decorator(sync_decorator):
+    def wrapper(func):
+        @functools.wraps(func)
+        async def wrapped_func(*args, **kwargs):
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None, functools.partial(sync_decorator, func)
+            )
+            return result(*args, **kwargs)
+
+        return wrapped_func
+
+    return wrapper
+
+
+def repeat(interval=0, count=-1):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            n = 0
+            while (count >= 0 and n < count) or (count < 0):
+                func(*args, **kwargs)
+                n += 1
+                if interval > 0:
+                    time.sleep(interval)
+
+        return wrapper
+
+    return decorator
+
+
+def run_once(f):
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        if not wrapper.has_run:
+            result = f(*args, **kwargs)
+            wrapper.has_run = True
+            return result
+
+    wrapper.has_run = False
+    return wrapper

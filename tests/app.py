@@ -1,14 +1,30 @@
 import time
+from dataclasses import dataclass
 
+from retrying import retry
+from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException
 
 from src.mybootstrap_core_itskovichanton.alerts import AlertService, alert_on_fail
 from src.mybootstrap_core_itskovichanton.app import Application
-from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_core_itskovichanton.logger import LoggerService, log
+from src.mybootstrap_core_itskovichanton.redis_service import RedisService
 from src.mybootstrap_core_itskovichanton.shell import ShellService
 from test_ioc import AbstractService, MyBean
+
+
+@dataclass
+class MyValue1:
+    a: str = "a"
+    b: int = 10
+
+
+@dataclass
+class MyValue2:
+    v: MyValue1
+    f1: str = "def"
+    f2: int = 10
 
 
 #
@@ -32,25 +48,34 @@ class TestCoreApp(Application):
     logger_service: LoggerService
     shell_service: ShellService
     mybean: MyBean
+    rds: RedisService
 
     def init(self, **kwargs):
         self.logger = self.logger_service.get_file_logger("tests")
 
-    def run(self):
+    @retry(wait_fixed=10000)
+    def test1(self):
         print(self.config_service.app_name())
+        raise CoreException("oops")
+
+    async def run(self):
+        self.test_redis()
+        # self.test1()
+        print(self.config_service.app_name())
+        rds = self.rds.get()
         # self.raise_err()
-        i=0
+        i = 0
         while True:
-            self.do_stuff_with_errors(1, 2, c=i)
-            i+=1
-            time.sleep(1)
+            await self.do_stuff_with_errors(1, 2, c=i)
+            i += 1
+            time.sleep(0.100)
 
         self.alert_service.get_interceptors().append(ignore_some_errors)
         # do_other_stuff_with_errors(1, 2, 3, 4)
 
     @alert_on_fail
     def raise_err(self):
-        print(1/0)
+        print(1 / 0)
 
     #  def _run(self):
     #     self.alert_service.get_interceptors().append(ignore_some_errors)
@@ -73,5 +98,16 @@ class TestCoreApp(Application):
 
     @log(_logger="tests", _desc=lambda args, kwargs: f"do stuff with {kwargs['c']}, 1st arg = {args[0]}")
     def do_stuff_with_errors(self, a, b, c=4):
-        print(a)
-        return #self.shell_service.execute("echo hello")
+        print("Hello")
+
+    def test_redis(self):
+        kv = self.rds.make_map(hname="stats", value_class=MyValue2)
+        kv.set("k1", MyValue2(v=MyValue1(a="xxxxx", b=100)))
+        kv.set("k2", MyValue2(v=MyValue1(a="aaa", b=-2)))
+        kv.set("k3", MyValue2(v=MyValue1(a="bbb", b=100), f1="f1", f2=30))
+
+        v1 = kv.get("k1")
+        v2 = kv.get("k2")
+        v3 = kv.get("k3")
+
+        print(v1, v2, v3)

@@ -70,9 +70,9 @@ class LogCompressor(Protocol):
 
 class TimedCompressedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
 
-    def __init__(self, filename, when='h', interval=1, backupCount=0, encoding=None, delay=False, utc=False,
-                 atTime=None, errors=None, log_compressor: LogCompressor = None, name=None, archive_type="rar"):
-        super().__init__(filename, when, interval, backupCount, encoding, delay, utc, atTime, errors)
+    def __init__(self, filename, when='midnight', interval=1, backup_count=0, encoding=None, delay=False, utc=False,
+                 at_time=None, errors=None, log_compressor: LogCompressor = None, name=None, archive_type="rar"):
+        super().__init__(filename, when, interval, backup_count, encoding, delay, utc, at_time, errors)
         self.log_compressor = log_compressor
         self.name = name
         self.archive_type = archive_type
@@ -141,7 +141,7 @@ class LoggerServiceImpl(LoggerService):
             encoding=encoding,
             filename=f"{os.path.join(self.config_service.dir('logs'), name)}-{self.config_service.app_name()}.txt",
             when=settings.get(logger_settings_prefix + ".when", "midnight"),
-            backupCount=settings.get(logger_settings_prefix + ".backup_count", 365))
+            backup_count=settings.get(logger_settings_prefix + ".backup_count", 365))
 
         if not formatter:
             formatter = SimpleJsonFormatter("%(t)s %(msg)s")
@@ -172,12 +172,15 @@ def async_log(logger, entry, tp):
         logger.info(entry)
 
 
-def log(_logger, _desc=None, _func=None, _action=None, _alert=False, _ignore_if_success=False, _preprocess_result=None):
+def log(_logger, _fields: list = None, _desc=None, _func=None, _action=None, _alert=False, _ignore_if_success=False):
     def log_decorator_info(func):
         @functools.wraps(func)
         def log_decorator_wrapper(self, *args, **kwargs):
             args_passed_in_function = [repr(a) for a in args]
-            kwargs_passed_in_function = [{k: v for k, v in kwargs.items()}]
+            fields = _fields
+            if fields is None:
+                fields = []
+            kwargs_passed_in_function = [{k: v for k, v in kwargs.items() if k in fields}]
             # formatted_arguments = ", ".join(args_passed_in_function + kwargs_passed_in_function)
             e = {}
             e["args"] = args_passed_in_function + kwargs_passed_in_function
@@ -189,7 +192,7 @@ def log(_logger, _desc=None, _func=None, _action=None, _alert=False, _ignore_if_
                     desc = str(func)
             if type(desc) != dict:
                 desc = {"desc": desc}
-            e["args"] += desc
+            e["args"] += [desc]
 
             if _action:
                 e["action"] = _action
@@ -200,9 +203,6 @@ def log(_logger, _desc=None, _func=None, _action=None, _alert=False, _ignore_if_
                 logger = logger_service.get_file_logger(str(logger))
             try:
                 result = func(self, *args, **kwargs)
-                # if _preprocess_result and callable(_preprocess_result):
-                #     result=_preprocess_result(copy(result))
-                # desc += f"; result={result!r}"
                 e["result"] = result
                 if _alert:
                     alerts.alert_service.send(Alert(subject=_action, message=desc))
@@ -214,7 +214,7 @@ def log(_logger, _desc=None, _func=None, _action=None, _alert=False, _ignore_if_
 
             except BaseException as ex:
                 result = "\n".join(traceback.format_exception(ex))
-                desc += {"error": f"{result!r}"}
+                desc["error"] = f"{result!r}"
                 e["result"] = result
                 async_log(logger, e, "error")
                 print(desc)
