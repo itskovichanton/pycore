@@ -251,7 +251,8 @@ def to_dict_deep(obj, route=(),
                  value_mapper: Callable[[tuple, Any], Any] = lambda _, x: x):
     if is_value_object and is_value_object(route, obj):
         return value_mapper(route, obj)
-    if not isinstance(obj, dict) and ((not obj) or isinstance(obj, (Enum, str, int, float, date, datetime)) or isclass(obj)):
+    if not isinstance(obj, dict) and (
+            (not obj) or isinstance(obj, (Enum, str, int, float, date, datetime)) or isclass(obj)):
         return value_mapper(route, obj)
     if isinstance(obj, (List, Set, Tuple)):
         return [to_dict_deep(x, route, is_value_object, key_mapper, value_mapper) for x in list(obj)]
@@ -473,5 +474,16 @@ def parse_http_params(params_string):
 
 def generate_unique_int():
     r = uuid.uuid1()
-    unique_int = int(r .int >> 96)
+    unique_int = int(r.int >> 96)
     return unique_int
+
+
+def is_base64(string: str) -> bool:
+    try:
+        encoded = string.encode('ascii')
+        decoded = base64.b64decode(encoded)
+        if encoded.strip()[-2:] == b'==':
+            return True
+        return False
+    except:
+        return False

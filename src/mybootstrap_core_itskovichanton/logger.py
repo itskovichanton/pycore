@@ -14,12 +14,13 @@ from typing import Protocol
 
 from paprika import threaded
 from pythonjsonlogger import jsonlogger
-from src.mybootstrap_core_itskovichanton import alerts
-from src.mybootstrap_core_itskovichanton.alerts import Alert
-from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, unescape_str
 from src.mybootstrap_ioc_itskovichanton import ioc
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
+
+from src.mybootstrap_core_itskovichanton import alerts
+from src.mybootstrap_core_itskovichanton.alerts import Alert
+from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, unescape_str
 
 
 class LoggerService(Protocol):
@@ -43,8 +44,8 @@ class SimpleJsonFormatter(jsonlogger.JsonFormatter):
 
         if self.trim_values_len > 0:
             trimmed_e = to_dict_deep(log_record,
-                                     value_mapper=lambda _, v: trim_string(str(v), limit=self.trim_values_len)
-                                     if type(v) == str else (v, type(v)))
+                                     value_mapper=lambda _, v: trim_string(v, limit=self.trim_values_len)
+                                     if type(v) == str else v)
             log_record.clear()
             log_record.update(trimmed_e)
 
