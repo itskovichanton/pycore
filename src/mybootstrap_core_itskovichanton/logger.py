@@ -12,15 +12,14 @@ from logging import Logger
 from pathlib import Path
 from typing import Protocol
 
-import patoolib
 from paprika import threaded
 from pythonjsonlogger import jsonlogger
-from src.mybootstrap_ioc_itskovichanton.config import ConfigService
-from src.mybootstrap_ioc_itskovichanton.ioc import bean
-
 from src.mybootstrap_core_itskovichanton import alerts
 from src.mybootstrap_core_itskovichanton.alerts import Alert
 from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, unescape_str
+from src.mybootstrap_ioc_itskovichanton import ioc
+from src.mybootstrap_ioc_itskovichanton.config import ConfigService
+from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
 
 class LoggerService(Protocol):
@@ -30,7 +29,7 @@ class LoggerService(Protocol):
 
 class SimpleJsonFormatter(jsonlogger.JsonFormatter):
 
-    def __init__(self, *args, trim_values_len=2000, **kwargs):
+    def __init__(self, *args, trim_values_len=3000, **kwargs):
         super().__init__(*args, **kwargs)
         self.trim_values_len = trim_values_len
 
@@ -44,7 +43,8 @@ class SimpleJsonFormatter(jsonlogger.JsonFormatter):
 
         if self.trim_values_len > 0:
             trimmed_e = to_dict_deep(log_record,
-                                     value_mapper=lambda _, v: trim_string(str(v), limit=self.trim_values_len))
+                                     value_mapper=lambda _, v: trim_string(str(v), limit=self.trim_values_len)
+                                     if type(v) == str else (v, type(v)))
             log_record.clear()
             log_record.update(trimmed_e)
 
@@ -104,11 +104,12 @@ class TimedCompressedRotatingFileHandler(logging.handlers.TimedRotatingFileHandl
         else:
             self.stream = open(self.baseFilename, 'w')
 
-        self.rolloverAt = self.rolloverAt + self.interval
+        self.rolloverAt += self.interval
 
         if self.archive_type == "rar":
             if os.path.exists(dfn + ".rar"):
                 os.remove(dfn + ".rar")
+            import patoolib
             patoolib.create_archive(dfn + ".rar", [dfn], program='rar', verbosity=-1)
         else:
             if os.path.exists(dfn + ".zip"):
@@ -132,16 +133,17 @@ class LoggerServiceImpl(LoggerService):
             return r
 
         logger_settings_prefix = "loggers." + name
-        settings = self.config_service.config.settings
-        r.setLevel(settings.get(logger_settings_prefix + ".level", logging.INFO))
+        props = ioc.context.properties
+        r.setLevel(props.get(logger_settings_prefix + ".level", logging.INFO))
         log_handler = TimedCompressedRotatingFileHandler(
-            archive_type=settings.get(logger_settings_prefix + ".archive_type", "zip"),
+            archive_type=props.get(logger_settings_prefix + ".archive_type", "zip"),
             log_compressor=self.log_compressor,
             name=name,
+            # interval=1440 - (5 * 60),
             encoding=encoding,
             filename=f"{os.path.join(self.config_service.dir('logs'), name)}-{self.config_service.app_name()}.txt",
-            when=settings.get(logger_settings_prefix + ".when", "midnight"),
-            backup_count=settings.get(logger_settings_prefix + ".backup_count", 365))
+            when=props.get(logger_settings_prefix + ".when", "midnight"),
+            backup_count=props.get(logger_settings_prefix + ".backup_count", 365))
 
         if not formatter:
             formatter = SimpleJsonFormatter("%(t)s %(msg)s")
@@ -172,55 +174,48 @@ def async_log(logger, entry, tp):
         logger.info(entry)
 
 
-def log(_logger, _fields: list = None, _desc=None, _func=None, _action=None, _alert=False, _ignore_if_success=False):
+def log(_logger, _fields: list = None, _desc=None, _func=None, _action=None, _alert_on_fail: bool = False,
+        _alert_on_success: bool = False, _suppress_fail: bool = False):
     def log_decorator_info(func):
         @functools.wraps(func)
         def log_decorator_wrapper(self, *args, **kwargs):
             args_passed_in_function = [repr(a) for a in args]
             fields = _fields
-            if fields is None:
-                fields = []
-            kwargs_passed_in_function = [{k: v for k, v in kwargs.items() if k in fields}]
-            # formatted_arguments = ", ".join(args_passed_in_function + kwargs_passed_in_function)
-            e = {}
-            e["args"] = args_passed_in_function + kwargs_passed_in_function
+            kwargs_passed_in_function = {k: v for k, v in kwargs.items() if (fields is None) or (k in fields)}
+            e = {"args": args_passed_in_function, "kwargs": kwargs_passed_in_function}
+
             desc = _desc
             if callable(desc):
                 desc = desc(args, kwargs)
-            else:
-                if not desc or len(desc) == 0:
-                    desc = str(func)
-            if type(desc) != dict:
-                desc = {"desc": desc}
-            e["args"] += [desc]
+            if len(desc or "") > 0:
+                e["desc"] = desc
 
             if _action:
                 e["action"] = _action
-                desc = f"{_action}: {desc}"
-            # desc += f": args={formatted_arguments}"
+
             logger = _logger
             if not isinstance(logger, logging.Logger):
                 logger = logger_service.get_file_logger(str(logger))
+
+            result = None
             try:
                 result = func(self, *args, **kwargs)
                 e["result"] = result
-                if _alert:
-                    alerts.alert_service.send(Alert(subject=_action, message=desc))
-                if _ignore_if_success:
-                    return
+                if _alert_on_success:
+                    print(e)
+                    alerts.alert_service.send(Alert(subject=_action, message=e))
 
                 async_log(logger, e, "info")
-                # print(desc)
 
             except BaseException as ex:
-                result = "\n".join(traceback.format_exception(ex))
-                desc["error"] = f"{result!r}"
-                e["result"] = result
+                e["error"] = ";".join([s.replace("\n", ";") for s in traceback.format_exception(ex)])
                 async_log(logger, e, "error")
-                print(desc)
-                if _alert:
+                print(e)
+                if _alert_on_fail:
                     alerts.alert_service.handle(ex)
-                raise ex
+                if not _suppress_fail:
+                    raise ex
+
             return result
 
         return log_decorator_wrapper
@@ -229,3 +224,39 @@ def log(_logger, _fields: list = None, _desc=None, _func=None, _action=None, _al
         return log_decorator_info
     else:
         return log_decorator_info(_func)
+
+
+def field(l: dict, field, value):
+    l[field] = value
+
+
+def action(l: dict, action):
+    field(l, "action", action)
+
+
+def args(l: dict, args):
+    field(l, "args", args)
+
+
+def subject(l: dict, subject):
+    field(l, "subject", subject)
+
+
+def result(l: dict, result):
+    field(l, "result", result)
+
+
+def ignore(l):
+    field(l, "ignored", True)
+
+
+def log_dict(l: dict, lg: Logger):
+    if not l.get("ignored"):
+        if l.get("err"):
+            lg.error(l)
+        else:
+            lg.info(l)
+
+
+def err(l: dict, e):
+    field(l, "err", traceback.format_exception(e))

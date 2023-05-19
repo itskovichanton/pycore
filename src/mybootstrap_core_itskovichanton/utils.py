@@ -11,9 +11,11 @@ import re
 import string
 import sys
 import time
+import urllib
 import uuid
 from collections import abc
 from collections.abc import MutableMapping
+from datetime import date, datetime
 from enum import Enum, EnumType
 from inspect import isclass
 from typing import Any, Callable, List, Set, Tuple
@@ -23,6 +25,7 @@ from benedict import benedict
 from dacite import from_dict
 from dataclasses_json import LetterCase, dataclass_json
 from dateutil.relativedelta import relativedelta
+
 from src.mybootstrap_core_itskovichanton.structures import CaseInsensitiveDict
 
 
@@ -242,12 +245,16 @@ def to_dict(obj, remove_none_values: bool = False):
     return r
 
 
-def to_dict_deep(obj, route=(), key_mapper: Callable[[tuple, str], str] = lambda _, x: x,
+def to_dict_deep(obj, route=(),
+                 is_value_object: Callable[[tuple, str], bool] = None,
+                 key_mapper: Callable[[tuple, str], str] = lambda _, x: x,
                  value_mapper: Callable[[tuple, Any], Any] = lambda _, x: x):
-    if not isinstance(obj, dict) and ((not obj) or isinstance(obj, (Enum, str, int, float)) or isclass(obj)):
+    if is_value_object and is_value_object(route, obj):
+        return value_mapper(route, obj)
+    if not isinstance(obj, dict) and ((not obj) or isinstance(obj, (Enum, str, int, float, date, datetime)) or isclass(obj)):
         return value_mapper(route, obj)
     if isinstance(obj, (List, Set, Tuple)):
-        return [to_dict_deep(x, route, key_mapper, value_mapper) for x in list(obj)]
+        return [to_dict_deep(x, route, is_value_object, key_mapper, value_mapper) for x in list(obj)]
     r = {}
     if isinstance(obj, CaseInsensitiveDict):
         obj = dict(obj)
@@ -258,11 +265,11 @@ def to_dict_deep(obj, route=(), key_mapper: Callable[[tuple, str], str] = lambda
             new_route = (*route, attr)
             attr = key_mapper(new_route, attr)
             if isinstance(value, (List, Set, Tuple)):
-                value = [to_dict_deep(x, new_route, key_mapper, value_mapper) for x in value]
+                value = [to_dict_deep(x, new_route, is_value_object, key_mapper, value_mapper) for x in value]
                 r.setdefault(attr, value)
             else:
                 try:
-                    value = to_dict_deep(value, new_route, key_mapper, value_mapper)
+                    value = to_dict_deep(value, new_route, is_value_object, key_mapper, value_mapper)
                     r.setdefault(attr, value)
                 except BaseException as e1:
                     # print("attr: ", attr, "\terror: ", e1)
@@ -451,3 +458,20 @@ def run_once(f):
 
     wrapper.has_run = False
     return wrapper
+
+
+def parse_http_params(params_string):
+    params_dict = {}
+    params_list = params_string.split('&')
+    for param in params_list:
+        key_value_pair = param.split('=')
+        key = urllib.parse.unquote(key_value_pair[0])
+        value = urllib.parse.unquote(key_value_pair[1])
+        params_dict[key] = value
+    return params_dict
+
+
+def generate_unique_int():
+    r = uuid.uuid1()
+    unique_int = int(r .int >> 96)
+    return unique_int

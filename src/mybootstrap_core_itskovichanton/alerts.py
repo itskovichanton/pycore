@@ -1,21 +1,19 @@
-import functools
 import logging
 import traceback
 from dataclasses import dataclass
-from typing import Protocol, Callable
-
-from src.mybootstrap_ioc_itskovichanton.ioc import bean
-from src.mybootstrap_ioc_itskovichanton.utils import default_dataclass_field
+from typing import Protocol, Callable, Any
 
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
+from src.mybootstrap_ioc_itskovichanton.ioc import bean
+from src.mybootstrap_ioc_itskovichanton.utils import default_dataclass_field, omittable_parentheses
+
 from src.mybootstrap_core_itskovichanton.email import EmailService, Params
 from src.mybootstrap_core_itskovichanton.fr import FRService, Post
-from src.mybootstrap_core_itskovichanton.utils import trim_string
 
 
 @dataclass
 class Alert:
-    message: str = None
+    message: Any = None
     subject: str = None
     byEmail: bool = True
     byFR: bool = True
@@ -68,7 +66,7 @@ class AlertServiceImpl(AlertService):
             # self.send_by_email(a)
 
     def send_by_fr(self, a):
-        self.fr_service.send(Post(project=a.subject, level=a.level, msg=trim_string(a.message, 4000)))
+        self.fr_service.send(Post(project=a.subject, level=a.level, msg=a.message))
 
     def send_by_email(self, a):
         self.email_service.send(
@@ -95,14 +93,24 @@ class AlertServiceImpl(AlertService):
         return e
 
 
-def alert_on_fail(method, alert: Alert = Alert(), supress: bool = False):
-    @functools.wraps(method)
-    def _impl(*method_args, **method_kwargs):
-        try:
-            return method(*method_args, **method_kwargs)
-        except BaseException as e:
-            alert_service.handle(e, alert)
-            if not supress:
-                raise e
+@omittable_parentheses(allow_partial=True)
+def alert_on_fail(alert: Alert | Callable[[Exception], Alert] = Alert(),
+                  supress: bool | Callable[[Exception], Any] = False):
+    def wrapper(func):
+        def inner(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                _alert = alert
+                if callable(_alert):
+                    _alert = _alert(e)
+                alert_service.handle(e, _alert)
+                _supress = supress
+                if callable(_supress):
+                    _supress = _supress(e)
+                if not _supress:
+                    raise e
 
-    return _impl
+        return inner
+
+    return wrapper

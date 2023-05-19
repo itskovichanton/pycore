@@ -1,3 +1,4 @@
+import random
 import time
 from dataclasses import dataclass
 
@@ -66,7 +67,7 @@ class TestCoreApp(Application):
         # self.raise_err()
         i = 0
         while True:
-            await self.do_stuff_with_errors(1, 2, c=i)
+            self.do_stuff_with_errors(1, 2, c=i)
             i += 1
             time.sleep(0.100)
 
@@ -96,9 +97,12 @@ class TestCoreApp(Application):
     def do_stuff_with_errors1(self):
         return "Hello"
 
-    @log(_logger="tests", _desc=lambda args, kwargs: f"do stuff with {kwargs['c']}, 1st arg = {args[0]}")
+    @log(_logger="tests", _suppress_fail=True)
     def do_stuff_with_errors(self, a, b, c=4):
+        if random.randint(0, 10) < 5:
+            raise CoreException(message="Тест-Ошибка!")
         print("Hello")
+        return "OK"
 
     def test_redis(self):
         kv = self.rds.make_map(hname="stats", value_class=MyValue2)

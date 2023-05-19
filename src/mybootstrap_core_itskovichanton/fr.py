@@ -6,6 +6,8 @@ import requests
 from paprika import threaded, silent_catch
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
+from src.mybootstrap_core_itskovichanton.utils import to_dict_deep, trim_string
+
 
 @dataclass
 class FRConfig:
@@ -34,6 +36,11 @@ class FRServiceImpl(FRService):
     def send(self, a: Post):
         if not self.url:
             return
+
+        if not isinstance(a.msg, dict):
+            a.msg = to_dict_deep(a.msg)
+
+        a.msg = trim_string(a.msg, 4000)
 
         with suppress(BaseException):
             requests.request("POST", self.url + "/postMsg",

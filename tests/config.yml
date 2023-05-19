@@ -25,7 +25,7 @@ sh:
 loggers:
   tests:
     backup_count: 30
-    when: s
+    when: m
 
 
 prod:
