@@ -140,7 +140,7 @@ class LoggerServiceImpl(LoggerService):
             archive_type=props.get(logger_settings_prefix + ".archive_type", "zip"),
             log_compressor=self.log_compressor,
             name=name,
-            # interval=1440 - (5 * 60),
+            interval=1440 - (5 * 60),
             encoding=encoding,
             filename=f"{os.path.join(self.config_service.dir('logs'), name)}-{self.config_service.app_name()}.txt",
             when=props.get(logger_settings_prefix + ".when", "midnight"),
@@ -176,7 +176,7 @@ def async_log(logger, entry, tp):
 
 
 def log(_logger, _fields: list = None, _desc=None, _func=None, _action=None, _alert_on_fail: bool = False,
-        _alert_on_success: bool = False, _suppress_fail: bool = False):
+        _alert_on_success: bool = False, _suppress_fail: bool = False, _include_elapsed_time: bool = False):
     def log_decorator_info(func):
         @functools.wraps(func)
         def log_decorator_wrapper(self, *args, **kwargs):
@@ -200,7 +200,10 @@ def log(_logger, _fields: list = None, _desc=None, _func=None, _action=None, _al
 
             result = None
             try:
+                time_before = datetime.now()
                 result = func(self, *args, **kwargs)
+                if _include_elapsed_time:
+                    e["elapsed"] = f"{datetime.now() - time_before}"
                 e["result"] = result
                 if _alert_on_success:
                     print(e)

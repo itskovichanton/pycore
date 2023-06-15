@@ -1,4 +1,5 @@
 import argparse
+from decimal import Decimal
 import asyncio
 import base64
 import dataclasses
@@ -15,7 +16,7 @@ import urllib
 import uuid
 from collections import abc
 from collections.abc import MutableMapping
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from enum import Enum, EnumType
 from inspect import isclass
 from typing import Any, Callable, List, Set, Tuple
@@ -252,7 +253,7 @@ def to_dict_deep(obj, route=(),
     if is_value_object and is_value_object(route, obj):
         return value_mapper(route, obj)
     if not isinstance(obj, dict) and (
-            (not obj) or isinstance(obj, (Enum, str, int, float, date, datetime)) or isclass(obj)):
+            (not obj) or isinstance(obj, (Enum, str, int, float, date, datetime, Decimal, timedelta)) or isclass(obj)):
         return value_mapper(route, obj)
     if isinstance(obj, (List, Set, Tuple)):
         return [to_dict_deep(x, route, is_value_object, key_mapper, value_mapper) for x in list(obj)]
