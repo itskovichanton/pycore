@@ -14,13 +14,12 @@ from typing import Protocol
 
 from paprika import threaded
 from pythonjsonlogger import jsonlogger
-from src.mybootstrap_ioc_itskovichanton import ioc
-from src.mybootstrap_ioc_itskovichanton.config import ConfigService
-from src.mybootstrap_ioc_itskovichanton.ioc import bean
-
 from src.mybootstrap_core_itskovichanton import alerts
 from src.mybootstrap_core_itskovichanton.alerts import Alert
 from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, unescape_str
+from src.mybootstrap_ioc_itskovichanton import ioc
+from src.mybootstrap_ioc_itskovichanton.config import ConfigService
+from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
 
 class LoggerService(Protocol):
@@ -176,7 +175,7 @@ def async_log(logger, entry, tp):
 
 
 def log(_logger, _fields: list = None, _desc=None, _func=None, _action=None, _alert_on_fail: bool = False,
-        _alert_on_success: bool = False, _suppress_fail: bool = False, _include_elapsed_time: bool = False):
+        _alert_on_success: bool = False, _suppress_fail: bool = False, _include_elapsed_time: bool = True):
     def log_decorator_info(func):
         @functools.wraps(func)
         def log_decorator_wrapper(self, *args, **kwargs):
@@ -199,11 +198,11 @@ def log(_logger, _fields: list = None, _desc=None, _func=None, _action=None, _al
                 logger = logger_service.get_file_logger(str(logger))
 
             result = None
+            time_before = int(round(time.time() * 1000))
             try:
-                time_before = datetime.now()
                 result = func(self, *args, **kwargs)
                 if _include_elapsed_time:
-                    e["elapsed"] = f"{datetime.now() - time_before}"
+                    e["elapsed"] = int(round(time.time() * 1000) - time_before)
                 e["result"] = result
                 if _alert_on_success:
                     print(e)
@@ -212,9 +211,10 @@ def log(_logger, _fields: list = None, _desc=None, _func=None, _action=None, _al
                 async_log(logger, e, "info")
 
             except BaseException as ex:
+                if _include_elapsed_time:
+                    e["elapsed"] = int(round(time.time() * 1000) - time_before)
                 e["error"] = ";".join([s.replace("\n", ";") for s in traceback.format_exception(ex)])
                 async_log(logger, e, "error")
-                print(e)
                 if _alert_on_fail:
                     alerts.alert_service.handle(ex)
                 if not _suppress_fail:
