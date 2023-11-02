@@ -133,7 +133,7 @@ class LoggerServiceImpl(LoggerService):
     log_compressor: LogCompressor = None
 
     def get_logged_session(self, logger_name="outgoing-requests") -> Session:
-        logger = self.logger_service.get_file_logger(logger_name)
+        logger = self.get_file_logger(logger_name)
 
         def _log_roundtrip(response, *args, **kwargs):
             extra = {
