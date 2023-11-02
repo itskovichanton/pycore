@@ -12,17 +12,23 @@ from logging import Logger
 from pathlib import Path
 from typing import Protocol
 
+import requests
 from paprika import threaded
 from pythonjsonlogger import jsonlogger
-from src.mybootstrap_core_itskovichanton import alerts
-from src.mybootstrap_core_itskovichanton.alerts import Alert
-from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, unescape_str
+from requests import Session
 from src.mybootstrap_ioc_itskovichanton import ioc
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
+from src.mybootstrap_core_itskovichanton import alerts
+from src.mybootstrap_core_itskovichanton.alerts import Alert
+from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, unescape_str
+
 
 class LoggerService(Protocol):
+    def get_logged_session(self, logger_name="outgoing-requests") -> Session:
+        ...
+
     def get_file_logger(self, name: str, encoding: str = "utf-8", formatter=None) -> Logger:
         ...
 
@@ -125,6 +131,31 @@ class TimedCompressedRotatingFileHandler(logging.handlers.TimedRotatingFileHandl
 class LoggerServiceImpl(LoggerService):
     config_service: ConfigService
     log_compressor: LogCompressor = None
+
+    def get_logged_session(self, logger_name="outgoing-requests") -> Session:
+        logger = self.logger_service.get_file_logger(logger_name)
+
+        def _log_roundtrip(response, *args, **kwargs):
+            extra = {
+                'req': {
+                    'method': response.request.method,
+                    'url': response.request.url,
+                    'headers': response.request.headers,
+                    'body': response.request.body,
+                },
+                'res': {
+                    'code': response.status_code,
+                    'reason': response.reason,
+                    'url': response.url,
+                    'headers': response.headers,
+                    'body': response.text
+                },
+            }
+            logger.info('Outgoing', extra=extra)
+
+        session = requests.Session()
+        session.hooks['response'].append(_log_roundtrip)
+        return session
 
     def get_file_logger(self, name: str, encoding: str = "utf-8",
                         formatter=None) -> Logger:
