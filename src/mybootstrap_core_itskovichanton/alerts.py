@@ -6,6 +6,7 @@ from typing import Protocol, Callable, Any
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 from src.mybootstrap_ioc_itskovichanton.utils import default_dataclass_field, omittable_parentheses
+from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException
 
 from src.mybootstrap_core_itskovichanton.email import EmailService, Params
 from src.mybootstrap_core_itskovichanton.fr import FRService, Post
@@ -85,6 +86,9 @@ class AlertServiceImpl(AlertService):
         self.send(alert)
 
     def _preprocess(self, e: BaseException) -> BaseException:
+        if isinstance(e, CoreException) and getattr(e, "suppress_report"):
+            return
+
         for interceptor in self._interceptors:
             if interceptor:
                 e = interceptor(e)
