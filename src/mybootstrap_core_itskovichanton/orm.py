@@ -1,6 +1,6 @@
 import inspect
 from dataclasses import dataclass
-from typing import Type, List, Set
+from typing import Type, List, Set, Any
 
 from peewee import *
 from peewee import ModelSelect
@@ -10,6 +10,13 @@ from peewee import ModelSelect
 class _Mapping:
     to: Type
     attrs: dict[str, str]
+    model_class_db_fields: Any = None
+
+    def init(self):
+        if self.model_class_db_fields is None:
+            self.model_class_db_fields = inspect.getmembers(self.to, lambda a: not (inspect.isroutine(a)))
+            self.model_class_db_fields = {a[0]: a[1] for a in self.model_class_db_fields if
+                                          not (a[0].startswith('__') and a[0].endswith('__'))}
 
 
 _MAPPING: dict[Type, _Mapping] = {}
@@ -30,15 +37,13 @@ def infer_where(filter, model_class_field_db_field: Field = None):
     if filter is not None:
         model_class_mapping = _MAPPING.get(type(filter))
         if model_class_mapping:
-
-            model_class_db_fields = inspect.getmembers(model_class_mapping.to, lambda a: not (inspect.isroutine(a)))
-            model_class_db_fields = {a[0]: a[1] for a in model_class_db_fields if
-                                     not (a[0].startswith('__') and a[0].endswith('__'))}
-
+            model_class_mapping.init()
             for filter_field in vars(filter):
                 filter_field_value = getattr(filter, filter_field)
                 if filter_field_value is not None:
-                    model_class_field_db_field = model_class_db_fields.get(filter_field)
+                    if model_class_mapping.attrs and filter_field in model_class_mapping.attrs:
+                        filter_field = model_class_mapping.attrs.get(filter_field)
+                    model_class_field_db_field = model_class_mapping.model_class_db_fields.get(filter_field)
                     where += infer_where(filter_field_value, model_class_field_db_field)
         else:
             where += [model_class_field_db_field == filter]
