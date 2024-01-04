@@ -5,6 +5,7 @@ import threading
 import dacite
 from etcd3.events import PutEvent
 from etcd3.watch import WatchResponse
+from fastapi_utils import camelcase
 
 from src.mybootstrap_core_itskovichanton.events import Events
 from src.mybootstrap_core_itskovichanton.validation import check_int, check_float, check_bool
@@ -15,7 +16,7 @@ from typing import Protocol, TypeVar, Generic, Any
 
 import etcd3
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
-from src.mybootstrap_ioc_itskovichanton.ioc import bean
+from src.mybootstrap_ioc_itskovichanton.ioc import bean, injector
 
 T = TypeVar('T')
 
@@ -65,16 +66,14 @@ class BoolRealTimeConfigEntry(RealTimeConfigEntry[bool]):
 
 
 class RealTimeConfigManager(Protocol):
-
-    def bind(self, e: RealTimeConfigEntry):
-        ...
+    ...
 
 
 @dataclass
 class _Config:
     host: str = "localhost"
     port: int = 2379
-    enabled: bool = True
+    module_name: str = "realtime_configs"
 
 
 def get_event_name(key):
@@ -87,13 +86,21 @@ class ETCDRealTimeConfigManagerImpl(RealTimeConfigManager):
     events: Events
 
     def init(self, **kwargs):
-        if self.cfg.enabled:
-            self.client = etcd3.client(host=self.cfg.host, port=self.cfg.port)
+        self.client = etcd3.client(host=self.cfg.host, port=self.cfg.port)
+        self._bind_entries()
+
+    def _bind_entries(self):
+        inj = injector()
+        for name, obj in vars(__import__(self.cfg.module_name)).items():
+            if isinstance(obj, type) and issubclass(obj, RealTimeConfigEntry) and obj != RealTimeConfigEntry:
+                entry = inj.inject(obj)
+                setattr(self, camelcase.camel2snake(name), entry)
+                self._bind_entry(entry)
 
     def _compile_key(self, key: str) -> str:
         return f"/{self.config_service.app_name()}/{key}"
 
-    def bind(self, e: RealTimeConfigEntry):
+    def _bind_entry(self, e: RealTimeConfigEntry):
         if not e.key:
             e.key = str(type(e))
         server_key = self._compile_key(e.key)

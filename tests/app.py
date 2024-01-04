@@ -10,11 +10,12 @@ from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException
 from src.mybootstrap_core_itskovichanton.alerts import AlertService, alert_on_fail
 from src.mybootstrap_core_itskovichanton.app import Application
 from src.mybootstrap_core_itskovichanton.logger import LoggerService, log
+from src.mybootstrap_core_itskovichanton.realtime_config import RealTimeConfigManager
+
 from src.mybootstrap_core_itskovichanton.redis_service import RedisService
 from src.mybootstrap_core_itskovichanton.shell import ShellService
 from test_ioc import AbstractService, MyBean
 from test_etcd import MyService
-from realtime_config_binder import RealTimeConfigs
 
 
 @dataclass
@@ -52,7 +53,7 @@ class TestCoreApp(Application):
     shell_service: ShellService
     mybean: MyBean
     rds: RedisService
-    real_time_config_binder: RealTimeConfigs
+    real_time_config: RealTimeConfigManager
     my_service: MyService
 
     def init(self, **kwargs):
