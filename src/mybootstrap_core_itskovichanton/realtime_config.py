@@ -3,9 +3,12 @@ import pickle
 import threading
 
 import dacite
+from etcd3 import Etcd3Client
 from etcd3.events import PutEvent
+from etcd3.exceptions import ConnectionFailedError
 from etcd3.watch import WatchResponse
 from fastapi_utils import camelcase
+from retrying import retry
 
 from src.mybootstrap_core_itskovichanton.events import Events
 from src.mybootstrap_core_itskovichanton.validation import check_int, check_float, check_bool
@@ -80,14 +83,28 @@ def get_event_name(key):
     return f"EVENT_REALTIME_CONFIG_UPDATED[{key}]"
 
 
+def with_retry(f):
+    return retry(wait_fixed=10000, retry_on_exception=lambda e: isinstance(e, ConnectionFailedError))(f)
+
+
+def _patch_etcd3_client():
+    Etcd3Client.get = with_retry(Etcd3Client.get)
+    Etcd3Client.put = with_retry(Etcd3Client.put)
+    Etcd3Client.put_if_not_exists = with_retry(Etcd3Client.put_if_not_exists)
+
+
 @bean(cfg=("realtime-config.etcd", _Config, _Config()))
 class ETCDRealTimeConfigManagerImpl(RealTimeConfigManager):
     config_service: ConfigService
     events: Events
 
     def init(self, **kwargs):
-        self.client = etcd3.client(host=self.cfg.host, port=self.cfg.port)
+        self._client = etcd3.client(host=self.cfg.host, port=self.cfg.port)
+        _patch_etcd3_client()
         self._bind_entries()
+
+    def etcd(self) -> Etcd3Client:
+        return self._client
 
     def _bind_entries(self):
         inj = injector()
@@ -104,9 +121,9 @@ class ETCDRealTimeConfigManagerImpl(RealTimeConfigManager):
         if not e.key:
             e.key = str(type(e))
         server_key = self._compile_key(e.key)
-        value_from_server, metadata = self.client.get(server_key)
+        value_from_server, metadata = self._client.get(server_key)
         if value_from_server is None:
-            self.client.put_if_not_exists(server_key, pickle.dumps(e.value))
+            self._client.put_if_not_exists(server_key, pickle.dumps(e.value))
         else:
             e.value = e.deserialize_value(pickle.loads(value_from_server))
 
@@ -118,4 +135,4 @@ class ETCDRealTimeConfigManagerImpl(RealTimeConfigManager):
                     e.value = e.deserialize_value(event.value)
                     self.events.notify(get_event_name(e.key), old_value=old_value, entry=e)
 
-            self.client.add_watch_callback(server_key, on_updated)
+            self._client.add_watch_callback(server_key, on_updated)
