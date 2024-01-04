@@ -31,6 +31,21 @@ def entity(real_entity, attr_mapping: dict[str, str] = None):
     return decorator
 
 
+def to_model(a):
+    model_class_mapping = _MAPPING.get(type(a))
+    if model_class_mapping:
+        model_class_mapping.init()
+        r = model_class_mapping.to()
+        for filter_field in vars(a):
+            filter_model_field = filter_field
+            if model_class_mapping.attrs and filter_field in model_class_mapping.attrs:
+                filter_model_field = model_class_mapping.attrs.get(filter_field)
+            setattr(r, filter_field, getattr(a, filter_model_field, None))
+    else:
+        r = a
+    return r
+
+
 def infer_where(filter, model_class_field_db_field: Field = None):
     where = []
 
