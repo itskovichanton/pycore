@@ -4,6 +4,7 @@ from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException, ERR_REA
 
 VALIDATION_REASON_EMPTY = "EMPTY"
 VALIDATION_REASON_INVALID_INT = "INVALID_INT"
+VALIDATION_REASON_INVALID_BOOL = "INVALID_BOOL"
 VALIDATION_REASON_INVALID_FLOAT = "INVALID_FLOAT"
 VALIDATION_REASON_UNEXPECTABLE = "UNEXPECTABLE"
 
@@ -30,6 +31,15 @@ def check_int(param: str, value, message="Некорректное int-знач�
         raise ValidationException(message=message,
                                   invalid_value=value, param=param,
                                   validation_reason=VALIDATION_REASON_INVALID_INT, cause=e)
+
+
+def check_bool(param: str, value, message="Некорректное bool-значение") -> bool:
+    try:
+        return bool(value)
+    except Exception as e:
+        raise ValidationException(message=message,
+                                  invalid_value=value, param=param,
+                                  validation_reason=VALIDATION_REASON_INVALID_BOOL, cause=e)
 
 
 def check_float(param: str, value, message="Некорректное float-значение") -> float:

@@ -13,6 +13,8 @@ from src.mybootstrap_core_itskovichanton.logger import LoggerService, log
 from src.mybootstrap_core_itskovichanton.redis_service import RedisService
 from src.mybootstrap_core_itskovichanton.shell import ShellService
 from test_ioc import AbstractService, MyBean
+from test_etcd import MyService
+from realtime_config_binder import RealTimeConfigs
 
 
 @dataclass
@@ -50,6 +52,8 @@ class TestCoreApp(Application):
     shell_service: ShellService
     mybean: MyBean
     rds: RedisService
+    real_time_config_binder: RealTimeConfigs
+    my_service: MyService
 
     def init(self, **kwargs):
         self.logger = self.logger_service.get_file_logger("tests")
@@ -66,10 +70,10 @@ class TestCoreApp(Application):
         rds = self.rds.get()
         # self.raise_err()
         i = 0
-        while True:
-            self.do_stuff_with_errors(1, 2, c=i)
-            i += 1
-            time.sleep(0.100)
+        # while True:
+        #     self.do_stuff_with_errors(1, 2, c=i)
+        #     i += 1
+        #     time.sleep(0.100)
 
         self.alert_service.get_interceptors().append(ignore_some_errors)
         # do_other_stuff_with_errors(1, 2, 3, 4)
