@@ -5,8 +5,6 @@ from common import User
 from src.mybootstrap_core_itskovichanton.realtime_config import RealTimeConfigEntry, IntRealTimeConfigEntry
 
 
-# Group author
-
 @bean
 class MyAgeRealTimeConfigEntry(IntRealTimeConfigEntry):
     key = "my_age"

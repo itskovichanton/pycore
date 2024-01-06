@@ -6,14 +6,17 @@ import logging.handlers
 import os
 import time
 import traceback
+import uuid
 import zipfile
 from datetime import datetime
 from logging import Logger
 from pathlib import Path
 from typing import Protocol
 
+import graypy
 import requests
 from paprika import threaded
+from pygelf import GelfUdpHandler
 from pythonjsonlogger import jsonlogger
 from requests import Session
 from src.mybootstrap_ioc_itskovichanton import ioc
@@ -26,6 +29,10 @@ from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep,
 
 
 class LoggerService(Protocol):
+
+    def get_graylog_logger(self, name: str) -> Logger:
+        ...
+
     def get_logged_session(self, logger_name="outgoing-requests") -> Session:
         ...
 
@@ -131,6 +138,26 @@ class TimedCompressedRotatingFileHandler(logging.handlers.TimedRotatingFileHandl
 class LoggerServiceImpl(LoggerService):
     config_service: ConfigService
     log_compressor: LogCompressor = None
+
+    def get_graylog_logger(self, name: str) -> Logger:
+        r = logging.getLogger(name)
+        if hasattr(r, "inited"):
+            return r
+
+        class ContextFilter(logging.Filter):
+            def filter(self, record):
+                record.request_id = str(uuid.uuid4())
+                return True
+
+        logger_settings_prefix = "loggers." + name
+        props = ioc.context.properties
+        r.setLevel(props.get(logger_settings_prefix + ".level", logging.INFO))
+        # graylog_handler =  graypy.GELFTCPHandler('0.0.0.0', 12201)
+        graylog_handler = GelfUdpHandler(host='localhost', port=12201)
+        r.addHandler(graylog_handler)
+        r.addFilter(ContextFilter())
+        r.inited = True
+        return r
 
     def get_logged_session(self, logger_name="outgoing-requests") -> Session:
         logger = self.get_file_logger(logger_name)
