@@ -1,0 +1,42 @@
+groups:
+
+- name: Тестовый счетчик получил значение 0
+  rules:
+  - alert: Значение тестового счетчика равно 0.
+    expr: random_value == 0
+    for: 5s
+    labels:
+      severity: page
+
+
+- name: Тестовый счетчик получил значение больше 10
+  rules:
+  - alert: Значение тестовго счетчика больше либо равно 10.
+    expr: random_value >= 10
+    for: 5s
+    labels:
+      severity: critical
+    annotations:
+      summary: Значение тестовго счетчика больше либо равно 10.
+
+
+- name: Тестовый счетчик получил значение больше 5
+  rules:
+  - alert: Значение тестовго счетчика больше либо равно 5.
+    expr: random_value >= 5
+    for: 5s
+    labels:
+      severity: critical
+    annotations:
+      summary: Значение тестовго счетчика больше либо равно 5.
+
+
+- name: Тестовый счетчик получил значение больше 3
+  rules:
+  - alert: Значение тестовго счетчика больше либо равно 3.
+    expr: random_value >= 10
+    for: 5s
+    labels:
+      severity: critical
+    annotations:
+      summary: Значение тестового счетчика больше либо равно 3.

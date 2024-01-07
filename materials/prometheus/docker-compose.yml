@@ -1,0 +1,36 @@
+version: "3.9"
+services:
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    hostname: prometheus
+    restart: always
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./alert.rules:/etc/prometheus/alert.rules
+    environment:
+      TZ: "Europe/Moscow"
+    ports:
+      - 9090:9090
+#    network_mode: "host"
+
+  alertmanager:
+    image: prom/alertmanager
+    container_name: alertmanager
+    hostname: alertmanager
+    restart: always
+    ports:
+      - 9093:9093
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+#    network_mode: "host"
+#
+#  alert_exporter:
+#    build: ./src
+#    container_name: alert_exporter
+#    hostname: alert_exporter
+#    restart: always
+#    ports:
+#      - 9000:9000

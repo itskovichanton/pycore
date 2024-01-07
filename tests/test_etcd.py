@@ -1,6 +1,7 @@
 from time import sleep
 
 from paprika import threaded
+from prometheus_client import Counter
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
@@ -21,8 +22,10 @@ class MyService:
 
     @threaded
     def _start_test(self):
+        c = Counter('my_counter', 'Description of counter')
         while True:
             print(self.my_name.value)
             self._logger.error({"v": self.my_name.value, "app": self.config_service.app_name()})
             self._logger.error("hello")
+            c.inc(1)
             sleep(self.interval.value)

@@ -10,6 +10,7 @@ from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException
 from src.mybootstrap_core_itskovichanton.alerts import AlertService, alert_on_fail
 from src.mybootstrap_core_itskovichanton.app import Application
 from src.mybootstrap_core_itskovichanton.logger import LoggerService, log
+from src.mybootstrap_core_itskovichanton.metrics_export import MetricsExporter
 from src.mybootstrap_core_itskovichanton.realtime_config import RealTimeConfigManager
 
 from src.mybootstrap_core_itskovichanton.redis_service import RedisService
@@ -52,6 +53,7 @@ class TestCoreApp(Application):
     logger_service: LoggerService
     shell_service: ShellService
     mybean: MyBean
+    me: MetricsExporter
     rds: RedisService
     real_time_config: RealTimeConfigManager
     my_service: MyService
