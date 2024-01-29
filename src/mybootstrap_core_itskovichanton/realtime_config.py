@@ -2,7 +2,6 @@ import os
 import pickle
 import threading
 
-import dacite
 from etcd3 import Etcd3Client
 from etcd3.events import PutEvent
 from etcd3.exceptions import ConnectionFailedError
@@ -22,11 +21,6 @@ from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_ioc_itskovichanton.ioc import bean, injector
 
 T = TypeVar('T')
-
-
-def default_deserializer(value_class, value_dict):
-    return dacite.from_dict(data_class=value_class, data=value_dict,
-                            config=dacite.Config(strict=False, check_types=False))
 
 
 class RealTimeConfigEntry(Generic[T]):
@@ -83,14 +77,13 @@ def get_event_name(key):
     return f"EVENT_REALTIME_CONFIG_UPDATED[{key}]"
 
 
-def with_retry(f):
-    return retry(wait_fixed=10000, retry_on_exception=lambda e: isinstance(e, ConnectionFailedError))(f)
-
-
 def _patch_etcd3_client():
-    Etcd3Client.get = with_retry(Etcd3Client.get)
-    Etcd3Client.put = with_retry(Etcd3Client.put)
-    Etcd3Client.put_if_not_exists = with_retry(Etcd3Client.put_if_not_exists)
+    def _with_retry(f):
+        return retry(wait_fixed=10000, retry_on_exception=lambda e: isinstance(e, ConnectionFailedError))(f)
+
+    Etcd3Client.get = _with_retry(Etcd3Client.get)
+    Etcd3Client.put = _with_retry(Etcd3Client.put)
+    Etcd3Client.put_if_not_exists = _with_retry(Etcd3Client.put_if_not_exists)
 
 
 @bean(cfg=("realtime-config.etcd", _Config, _Config()))
