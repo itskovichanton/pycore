@@ -488,3 +488,11 @@ def is_base64(string: str) -> bool:
         return False
     except:
         return False
+
+
+def is_sequence(a):
+    return isinstance(a, (list, tuple, str, dict, set))
+
+
+def is_listable(a):
+    return isinstance(a, (list, tuple))
