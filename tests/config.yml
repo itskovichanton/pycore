@@ -32,6 +32,20 @@ prod:
   qcb:
     version: 1
 
+  watchdog:
+    service_name: test
+    dependent_services:
+      - test2
+      - test3
+    handlers:
+      zombie:
+        trigger: log-file-growth-stopped+healthcheck
+        action: restart
+        args:
+          log: test
+          interval_min: 20
+          port: 8081
+
 
 dev:
   qcb:

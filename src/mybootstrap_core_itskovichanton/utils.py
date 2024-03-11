@@ -1,9 +1,7 @@
 import argparse
-from decimal import Decimal
 import asyncio
 import base64
 import dataclasses
-import traceback
 import decimal
 import functools
 import hashlib
@@ -13,11 +11,13 @@ import re
 import string
 import sys
 import time
+import traceback
 import urllib
 import uuid
 from collections import abc
 from collections.abc import MutableMapping
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 from enum import Enum, EnumType
 from inspect import isclass
 from typing import Any, Callable, List, Set, Tuple
@@ -527,3 +527,23 @@ def catch(_func=None, *, exception=None, handler=None, silent=False):
         return decorator_catch
     else:
         return decorator_catch(_func)
+
+
+def singleton(func):
+    singleton_cache = {}
+
+    def calc_hash(k):
+        try:
+            return hash(k)
+        except:
+            return str(id(k))
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        key = (args, frozenset(kwargs.items()))
+        key = tuple(calc_hash(k) for k in key)
+        if key not in singleton_cache:
+            singleton_cache[key] = func(*args, **kwargs)
+        return singleton_cache[key]
+
+    return wrapper

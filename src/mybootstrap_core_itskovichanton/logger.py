@@ -22,7 +22,7 @@ from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
 from src.mybootstrap_core_itskovichanton import alerts
 from src.mybootstrap_core_itskovichanton.alerts import Alert
-from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, unescape_str
+from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, unescape_str, singleton
 
 
 class LoggerService(Protocol):
@@ -132,6 +132,7 @@ class LoggerServiceImpl(LoggerService):
     config_service: ConfigService
     log_compressor: LogCompressor = None
 
+    @singleton
     def get_logged_session(self, logger_name="outgoing-requests") -> Session:
         logger = self.get_file_logger(logger_name)
 

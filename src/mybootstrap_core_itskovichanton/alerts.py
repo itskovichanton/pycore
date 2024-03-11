@@ -86,7 +86,7 @@ class AlertServiceImpl(AlertService):
         self.send(alert)
 
     def _preprocess(self, e: BaseException) -> BaseException:
-        if isinstance(e, CoreException) and getattr(e, "suppress_report"):
+        if isinstance(e, CoreException) and getattr(e, "suppress_report", None):
             return
 
         for interceptor in self._interceptors:
