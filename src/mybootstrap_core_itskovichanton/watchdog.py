@@ -1,4 +1,5 @@
 import os
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -53,9 +54,10 @@ class Watchdog:
 
     @alert_on_fail(supress=True)
     def _create_watchdog_service(self, handler_name: str, handler: _Handler):
-        srv_name = f"watchdog-{self.config_service.app_name()}-{handler_name}.service"
-        srv_name = srv_name.replace("[", "-").replace("]", "-")
+        srv_name = self.get_systemctl_service_name(handler_name)
         script_file = self._write_script_restart_on_file_growth_stopped(handler_name, handler)
+        if self.is_service_active(srv_name):
+            return
         self._write_service(handler_name, script_file, srv_name)
         self._start_service(handler_name, srv_name)
 
@@ -113,7 +115,7 @@ After=multi-user.target
 [Service]
 Type=simple
 WorkingDirectory={os.path.dirname(script_file)}
-ExecStart=sudo bash {script_file}
+ExecStart=bash {script_file}
 Restart=always
 RestartSec=3
 
@@ -137,3 +139,21 @@ StandardError=append:/var/log/{srv_name}/{handler_name}.err.log
 \t\treanimate
 \tfi
 """
+
+    def is_service_active(self, service_name):
+        command = f'systemctl status {service_name}'
+
+        try:
+            output = subprocess.check_output(command, shell=True).decode('utf-8')
+
+            if "active (running)" in output:
+                return True
+            else:
+                return False
+        except:
+            return False
+
+    def get_systemctl_service_name(self, handler_name: str):
+        srv_name = f"watchdog-{self.config_service.app_name()}-{handler_name}.service"
+        srv_name = srv_name.replace("[", "-").replace("]", "-")
+        return srv_name
