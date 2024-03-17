@@ -95,8 +95,8 @@ do
 \tif [ $new_size -eq $current_size ]; then
 \t\techo "Размер файла не изменился. Перезапуск сервиса"
 \t\treanimate
-\t\tcurrent_size=$new_size
 \tfi
+\tcurrent_size=$new_size
 done"""
 
     def _write_service(self, handler_name, script_file, srv_name):
@@ -137,6 +137,7 @@ StandardError=append:/var/log/{srv_name}/{handler_name}.err.log
 \tif [ $? -eq 28 ] || [ $? -eq 7 ]; then
 \t\techo "Запрос curl на порт оборвался таймауту. Перезапуск сервиса"
 \t\treanimate
+\t\tcontinue
 \tfi
 """
 
