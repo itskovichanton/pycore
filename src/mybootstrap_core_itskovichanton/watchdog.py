@@ -63,8 +63,9 @@ class Watchdog:
 
     def _write_script_restart_on_file_growth_stopped(self, handler_name: str, handler: _Handler):
         srv_script_file = os.path.join(self.config_service.dir("watchdog"), f"{handler_name}.sh")
-        with open(srv_script_file, 'w', encoding='utf-8') as f:
-            f.write(self._compose_script_restart_on_file_growth_stopped(handler))
+        if not os.path.isfile(srv_script_file):
+            with open(srv_script_file, 'w', encoding='utf-8') as f:
+                f.write(self._compose_script_restart_on_file_growth_stopped(handler))
         return os.path.abspath(srv_script_file)
 
     def _compose_script_restart_on_file_growth_stopped(self, handler: _Handler):

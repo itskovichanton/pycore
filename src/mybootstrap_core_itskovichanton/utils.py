@@ -23,6 +23,7 @@ from inspect import isclass
 from typing import Any, Callable, List, Set, Tuple
 from urllib.parse import urlparse, urlencode, urlunparse
 
+import schedule
 from benedict import benedict
 from dacite import from_dict
 from dataclasses_json import LetterCase, dataclass_json
@@ -547,3 +548,33 @@ def singleton(func):
         return singleton_cache[key]
 
     return wrapper
+
+
+def scheduled(everyday_time):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            schedule.every().day.at(everyday_time).do(func, *args, **kwargs)
+            while True:
+                schedule.run_pending()
+                time.sleep(1)
+
+        return wrapper
+
+    def decorator_class_method(func):
+        @functools.wraps(func)
+        def wrapper(self, *args, **kwargs):
+            schedule.every().day.at(everyday_time).do(func, self, *args, **kwargs)
+            while True:
+                schedule.run_pending()
+                time.sleep(1)
+
+        return wrapper
+
+    def decorate(func):
+        if hasattr(func, '__call__'):
+            return decorator(func)
+        else:
+            return decorator_class_method(func)
+
+    return decorate
