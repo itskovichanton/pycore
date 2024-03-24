@@ -3,10 +3,10 @@ from dataclasses import dataclass
 from typing import Protocol
 
 import requests
-from paprika import threaded, silent_catch
+from paprika import threaded
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
-from src.mybootstrap_core_itskovichanton.utils import to_dict_deep, trim_string
+from src.mybootstrap_core_itskovichanton.utils import to_dict_deep, trim_string, silent_catch
 
 
 @dataclass

@@ -32,6 +32,17 @@ prod:
   qcb:
     version: 1
 
+  watchdog:
+    service_name: reports-prod
+    handlers:
+      zombie-kontur:
+        trigger: log-file-growth-stopped+healthcheck
+        action: restart
+        args:
+          log: kontur
+          interval_min: 20
+          port: 6059
+
 
 dev:
   qcb:

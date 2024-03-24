@@ -15,6 +15,7 @@ from src.mybootstrap_core_itskovichanton.realtime_config import RealTimeConfigMa
 
 from src.mybootstrap_core_itskovichanton.redis_service import RedisService
 from src.mybootstrap_core_itskovichanton.shell import ShellService
+from src.mybootstrap_core_itskovichanton.watchdog import Watchdog
 from test_ioc import AbstractService, MyBean
 from test_etcd import MyService
 
@@ -52,6 +53,7 @@ class TestCoreApp(Application):
     config_service: ConfigService
     logger_service: LoggerService
     shell_service: ShellService
+    watchdog: Watchdog
     mybean: MyBean
     me: MetricsExporter
     rds: RedisService

@@ -1,5 +1,4 @@
 import argparse
-from decimal import Decimal
 import asyncio
 import base64
 import dataclasses
@@ -12,16 +11,19 @@ import re
 import string
 import sys
 import time
+import traceback
 import urllib
 import uuid
 from collections import abc
 from collections.abc import MutableMapping
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 from enum import Enum, EnumType
 from inspect import isclass
 from typing import Any, Callable, List, Set, Tuple
 from urllib.parse import urlparse, urlencode, urlunparse
 
+import schedule
 from benedict import benedict
 from dacite import from_dict
 from dataclasses_json import LetterCase, dataclass_json
@@ -488,3 +490,91 @@ def is_base64(string: str) -> bool:
         return False
     except:
         return False
+
+
+def is_sequence(a):
+    return isinstance(a, (list, tuple, str, dict, set))
+
+
+def is_listable(a):
+    return isinstance(a, (list, tuple))
+
+
+def silent_catch(_func=None, *, exception=None):
+    return catch(_func=_func, exception=exception, silent=True)
+
+
+def catch(_func=None, *, exception=None, handler=None, silent=False):
+    if not exception:
+        exception = Exception
+    if type(exception) == list:
+        exception = tuple(exception)
+
+    def decorator_catch(func):
+        @functools.wraps(func)
+        def wrapper_catch(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except BaseException as e:
+                if not silent:
+                    if not handler:
+                        traceback.print_exc()
+                    else:
+                        handler(e)
+
+        return wrapper_catch
+
+    if _func is None:
+        return decorator_catch
+    else:
+        return decorator_catch(_func)
+
+
+def singleton(func):
+    singleton_cache = {}
+
+    def calc_hash(k):
+        try:
+            return hash(k)
+        except:
+            return str(id(k))
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        key = (args, frozenset(kwargs.items()))
+        key = tuple(calc_hash(k) for k in key)
+        if key not in singleton_cache:
+            singleton_cache[key] = func(*args, **kwargs)
+        return singleton_cache[key]
+
+    return wrapper
+
+
+def scheduled(everyday_time):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            schedule.every().day.at(everyday_time).do(func, *args, **kwargs)
+            while True:
+                schedule.run_pending()
+                time.sleep(1)
+
+        return wrapper
+
+    def decorator_class_method(func):
+        @functools.wraps(func)
+        def wrapper(self, *args, **kwargs):
+            schedule.every().day.at(everyday_time).do(func, self, *args, **kwargs)
+            while True:
+                schedule.run_pending()
+                time.sleep(1)
+
+        return wrapper
+
+    def decorate(func):
+        if hasattr(func, '__call__'):
+            return decorator(func)
+        else:
+            return decorator_class_method(func)
+
+    return decorate

@@ -4,6 +4,7 @@ import glob
 import logging
 import logging.handlers
 import os
+import requests
 import time
 import traceback
 import uuid
@@ -17,15 +18,16 @@ import graypy
 import requests
 from paprika import threaded
 from pygelf import GelfUdpHandler
+from pathlib import Path
 from pythonjsonlogger import jsonlogger
 from requests import Session
+from src.mybootstrap_core_itskovichanton import alerts
+from src.mybootstrap_core_itskovichanton.alerts import Alert
+from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, unescape_str, singleton
 from src.mybootstrap_ioc_itskovichanton import ioc
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
-
-from src.mybootstrap_core_itskovichanton import alerts
-from src.mybootstrap_core_itskovichanton.alerts import Alert
-from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, unescape_str
+from typing import Protocol
 
 
 class LoggerService(Protocol):
@@ -159,6 +161,7 @@ class LoggerServiceImpl(LoggerService):
         r.inited = True
         return r
 
+    @singleton
     def get_logged_session(self, logger_name="outgoing-requests") -> Session:
         logger = self.get_file_logger(logger_name)
 
@@ -177,6 +180,7 @@ class LoggerServiceImpl(LoggerService):
                     'headers': response.headers,
                     'body': response.text
                 },
+                'elapsed': time.time() - response.request.start_time,
             }
             logger.info('Outgoing', extra=extra)
 
