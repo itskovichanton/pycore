@@ -578,3 +578,20 @@ def scheduled(everyday_time):
             return decorator_class_method(func)
 
     return decorate
+
+
+def wrap_exception(wrapper: Callable[[BaseException], BaseException], suppress_if_wrapped_to_none=False):
+    def decorator(func):
+        def wrapper_func(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except BaseException as e:
+                wrapped = wrapper(e)
+                if wrapped:
+                    raise wrapped
+                if not suppress_if_wrapped_to_none:
+                    raise e
+
+        return wrapper_func
+
+    return decorator
