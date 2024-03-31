@@ -541,7 +541,9 @@ def singleton(func):
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        key = (args, frozenset(kwargs.items()))
+        key = args
+        if kwargs:
+            key += (frozenset(kwargs.items()),)
         key = tuple(calc_hash(k) for k in key)
         if key not in singleton_cache:
             singleton_cache[key] = func(*args, **kwargs)
@@ -578,3 +580,20 @@ def scheduled(everyday_time):
             return decorator_class_method(func)
 
     return decorate
+
+
+def wrap_exception(wrapper: Callable[[BaseException], BaseException], suppress_if_wrapped_to_none=False):
+    def decorator(func):
+        def wrapper_func(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except BaseException as e:
+                wrapped = wrapper(e)
+                if wrapped:
+                    raise wrapped
+                if not suppress_if_wrapped_to_none:
+                    raise e
+
+        return wrapper_func
+
+    return decorator
