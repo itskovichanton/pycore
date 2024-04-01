@@ -88,8 +88,7 @@ class AlertServiceImpl(AlertService):
 
     def _preprocess(self, e: BaseException) -> BaseException:
         if (isinstance(e, CoreException) and
-                getattr(e, "suppress_report", None)
-                or e.reason == ERR_REASON_SERVER_RESPONDED_WITH_ERROR_NOT_FOUND):
+                (getattr(e, "suppress_report", None) or e.reason == ERR_REASON_SERVER_RESPONDED_WITH_ERROR_NOT_FOUND)):
             return
 
         for interceptor in self._interceptors:
