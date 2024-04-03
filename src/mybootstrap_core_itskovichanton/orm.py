@@ -61,7 +61,8 @@ def infer_where(filter, model_class_field_db_field: Field = None):
                     model_class_field_db_field = model_class_mapping.model_class_db_fields.get(filter_field)
                     where += infer_where(filter_field_value, model_class_field_db_field)
         else:
-            where += [model_class_field_db_field == filter]
+            if model_class_field_db_field:
+                where += [model_class_field_db_field == filter]
 
     return where
 
