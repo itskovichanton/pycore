@@ -16,13 +16,15 @@ import urllib
 import uuid
 from collections import abc
 from collections.abc import MutableMapping
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from enum import Enum, EnumType
 from inspect import isclass
-from typing import Any, Callable, List, Set, Tuple
+from typing import Any, Callable, List, Set, Tuple, TypeVar
 from urllib.parse import urlparse, urlencode, urlunparse
 
+import gevent
 import schedule
 from benedict import benedict
 from dacite import from_dict
@@ -595,5 +597,35 @@ def wrap_exception(wrapper: Callable[[BaseException], BaseException], suppress_i
                     raise e
 
         return wrapper_func
+
+    return decorator
+
+
+A = TypeVar('A')
+B = TypeVar('B')
+
+
+def calc_parallel(args, operation: Callable[[A], B]) -> dict[A, B]:
+    threads = {}
+
+    for arg in args:
+        thread = gevent.spawn(operation, arg)
+        threads[arg] = thread
+
+    gevent.joinall(threads.values())
+
+    return {k: v.value for k, v in threads.items()}
+
+
+_DEFAULT_POOL = ThreadPoolExecutor()
+
+
+def threaded(executor=None):
+    def decorator(f):
+        @functools.wraps(f)
+        def wrapper_threaded(*args, **kwargs):
+            return (executor or _DEFAULT_POOL).submit(f, *args, **kwargs)
+
+        return wrapper_threaded
 
     return decorator
