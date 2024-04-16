@@ -21,10 +21,9 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from enum import Enum, EnumType
 from inspect import isclass
-from typing import Any, Callable, List, Set, Tuple, TypeVar
+from typing import Any, Callable, List, Set, Tuple, TypeVar, Dict
 from urllib.parse import urlparse, urlencode, urlunparse
 
-import gevent
 import schedule
 from benedict import benedict
 from dacite import from_dict
@@ -605,16 +604,38 @@ A = TypeVar('A')
 B = TypeVar('B')
 
 
-def calc_parallel(args, operation: Callable[[A], B]) -> dict[A, B]:
-    threads = {}
+def execute_parallel(ops: list[Tuple[Callable, List, Dict]], pool=None):
+    ops = [op for op in ops if op]
+    if not ops:
+        return
+    if not pool:
+        pool = ThreadPoolExecutor()
 
-    for arg in args:
-        thread = gevent.spawn(operation, arg)
-        threads[arg] = thread
+    with pool as executor:
+        for op in ops:
+            if len(op) == 1:
+                executor.submit(op[0])
+            elif len(op) == 2:
+                executor.submit(op[0], *op[1])
+            elif len(op) == 2:
+                executor.submit(op[0], *op[1], **op[2])
 
-    gevent.joinall(threads.values())
 
-    return {k: v.value for k, v in threads.items()}
+def calc_parallel(args, operation: Callable[[A], B], pool=None) -> dict[A, B]:
+    result_dict = {}
+    if not args:
+        return result_dict
+
+    def execute_operation(arg):
+        result = operation(arg)
+        result_dict[arg] = result
+
+    if not pool:
+        pool = ThreadPoolExecutor()
+    with pool as executor:
+        executor.map(execute_operation, args)
+
+    return result_dict
 
 
 _DEFAULT_POOL = ThreadPoolExecutor()
@@ -629,3 +650,17 @@ def threaded(executor=None):
         return wrapper_threaded
 
     return decorator
+
+
+def hashed(cls):
+    def eq(self, other):
+        if not isinstance(other, cls):
+            return NotImplemented
+        return all(getattr(self, field.name) == getattr(other, field.name) for field in dataclasses.fields(cls))
+
+    def hash_(self):
+        return hash(tuple(getattr(self, field.name) for field in dataclasses.fields(cls)))
+
+    cls.__eq__ = eq
+    cls.__hash__ = hash_
+    return cls

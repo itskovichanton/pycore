@@ -63,7 +63,8 @@ def infer_where(filter, model_class_field_db_field: Field = None):
         else:
             if model_class_field_db_field:
                 where += [model_class_field_db_field == filter]
-
+    if not where:
+        where = [1 == 1]
     return where
 
 
@@ -76,11 +77,15 @@ def convert_to_real_entity(a):
         return a
 
     r = to_class.to()
+    attrs = vars(a)
     try:
-        for a_field in a.__data__:
-            setattr(r, a_field, convert_to_real_entity(getattr(a, a_field)))
+        data = dict(a.__data__)
+        data.update({k: v for k, v in attrs.items() if not k.startswith("_")})
+        data.update(attrs.get("__rel__") or {})
+        for a_field, a_value in data.items():
+            setattr(r, a_field, convert_to_real_entity(a_value))
     except:
-        a_fields = vars(a)
+        a_fields = attrs
 
     return r
 
@@ -88,6 +93,10 @@ def convert_to_real_entity(a):
 def to_real_entity(func, to_dict_with_key=None):
     def wrapper(*args, **kwargs):
         r = func(*args, **kwargs)
+        if not r:
+            return
+        if isinstance(r, Model):
+            return convert_to_real_entity(r)
         if isinstance(r, ModelSelect):
             r = [x for x in r]
         if isinstance(r, List):
