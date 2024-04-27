@@ -1,6 +1,7 @@
 import inspect
+import typing
 from dataclasses import dataclass
-from typing import Type, List, Set, Any
+from typing import Type, List, Set, Any, Tuple
 
 from peewee import *
 from peewee import ModelSelect
@@ -72,16 +73,26 @@ def convert_to_real_entity(a):
     if a is None:
         return
 
+    if isinstance(a, List):
+        return [convert_to_real_entity(x) for x in a]
+    elif isinstance(a, Set):
+        return {convert_to_real_entity(x) for x in a}
+    elif isinstance(a, typing.Tuple):
+        return (convert_to_real_entity(x) for x in a)
+
     to_class = _MAPPING.get(type(a))
     if to_class is None:
         return a
 
     r = to_class.to()
-    attrs = vars(a)
+    attrs = dict(vars(a))
     try:
         data = dict(a.__data__)
         data.update({k: v for k, v in attrs.items() if not k.startswith("_")})
-        data.update(attrs.get("__rel__") or {})
+        for p in inspect.getmembers(type(a), lambda x:not(inspect.isroutine(x))):
+            if not p[0].startswith("_"):
+                getattr(a, p[0], None)
+        data.update(vars(a).get("__rel__") or {})
         for a_field, a_value in data.items():
             setattr(r, a_field, convert_to_real_entity(a_value))
     except:
@@ -103,7 +114,7 @@ def to_real_entity(func, to_dict_with_key=None):
             r = [convert_to_real_entity(x) for x in r]
         elif isinstance(r, Set):
             r = {convert_to_real_entity(x) for x in r}
-        elif isinstance(r, Tuple):
+        elif isinstance(r, typing.Tuple):
             r = (convert_to_real_entity(x) for x in r)
         else:
             return convert_to_real_entity(r)

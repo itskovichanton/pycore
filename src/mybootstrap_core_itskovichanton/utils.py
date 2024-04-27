@@ -22,6 +22,7 @@ from decimal import Decimal
 from enum import Enum, EnumType
 from inspect import isclass
 from typing import Any, Callable, List, Set, Tuple, TypeVar, Dict
+from urllib.error import URLError
 from urllib.parse import urlparse, urlencode, urlunparse
 
 import schedule
@@ -664,3 +665,7 @@ def hashed(cls):
     cls.__eq__ = eq
     cls.__hash__ = hash_
     return cls
+
+
+def is_network_connection_failed(ex: BaseException) -> bool:
+    return isinstance(ex, (ConnectionError, URLError, TimeoutError))

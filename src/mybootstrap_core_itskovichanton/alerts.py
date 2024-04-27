@@ -3,6 +3,9 @@ import traceback
 from dataclasses import dataclass
 from typing import Protocol, Callable, Any
 
+from retrying import retry
+
+from src.mybootstrap_core_itskovichanton.utils import is_network_connection_failed
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 from src.mybootstrap_ioc_itskovichanton.utils import default_dataclass_field, omittable_parentheses
@@ -118,5 +121,14 @@ def alert_on_fail(alert: Alert | Callable[[Exception], Alert] = Alert(),
                     raise e
 
         return inner
+
+    return wrapper
+
+
+def retry_and_alert(func, sleep_ms=10000, retry_on=is_network_connection_failed, alert: Alert = None):
+    @retry(wait_fixed=sleep_ms, retry_on_exception=retry_on)
+    @alert_on_fail(alert=alert)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
 
     return wrapper
