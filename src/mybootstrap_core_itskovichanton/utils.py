@@ -25,6 +25,7 @@ from typing import Any, Callable, List, Set, Tuple, TypeVar, Dict
 from urllib.error import URLError
 from urllib.parse import urlparse, urlencode, urlunparse
 
+import psutil
 import schedule
 from benedict import benedict
 from dacite import from_dict
@@ -669,3 +670,20 @@ def hashed(cls):
 
 def is_network_connection_failed(ex: BaseException) -> bool:
     return isinstance(ex, (ConnectionError, URLError, TimeoutError))
+
+
+def get_systemd_service_name(process):
+    try:
+        cmdline = process.cmdline()
+        for arg in cmdline:
+            if arg.startswith("--unit="):
+                return arg.split("--unit=")[1]
+    except psutil.Error:
+        pass
+
+    return None
+
+
+def get_systemd_service_for_pid(pid):
+    process = psutil.Process(pid)
+    return get_systemd_service_name(process)
