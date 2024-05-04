@@ -25,12 +25,12 @@ class MetricsExporter:
     config_service: ConfigService
 
     def init(self, **kwargs):
-        if self.config.enabled:
+        if self.config and self.config.enabled:
             start_http_server(self.config.port)
 
     @singleton
     def get_gauge(self, metric_name, doc) -> Gauge:
-        return Gauge(name=self.get_gauge_name(metric_name), documentation=doc, multiprocess_mode=[])
+        return Gauge(self.get_gauge_name(metric_name), doc, [])
 
     def prometheus_metric(self, metric_name):
         def decorator(func):
@@ -63,6 +63,4 @@ class MetricsExporter:
         return f"{self.config.frontend_url}?g0.expr={self.get_gauge_name(metric_name)}"
 
 
-metrics_exporter = injector().inject(MetricsExporter)
-
-prometheus_metric = metrics_exporter.prometheus_metric
+prometheus_metric = injector().inject(MetricsExporter).prometheus_metric
