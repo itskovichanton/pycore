@@ -10,31 +10,7 @@ from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 
 from src.mybootstrap_core_itskovichanton.di import injector
 
-from src.mybootstrap_core_itskovichanton.utils import singleton
-
-
-@singleton
-def get_gauge(metric_name, doc) -> Gauge:
-    return Gauge(metric_name, doc, [])
-
-
-def prometheus_metric(metric_name):
-    def decorator(func):
-        # @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            start_time = time.time()
-            result = func(*args, **kwargs)
-            execution_time = time.time() - start_time
-
-            # Создаем метрику в Prometheus
-            metric = get_gauge(metric_name, doc=f'execution time of {func.__name__} in milliseconds')
-            metric.set(execution_time)
-
-            return result
-
-        return wrapper
-
-    return decorator
+from src.mybootstrap_core_itskovichanton.utils import singleton, get_systemd_service_for_pid
 
 
 @dataclass
@@ -53,8 +29,31 @@ class MetricsExporter:
             start_http_server(self.config.port)
 
     @singleton
+    def get_gauge(self, metric_name, doc) -> Gauge:
+        return Gauge(name=self.get_gauge_name(metric_name), documentation=doc, multiprocess_mode=[])
+
+    def prometheus_metric(self, metric_name):
+        def decorator(func):
+            # @functools.wraps(func)
+            def wrapper(*args, **kwargs):
+                start_time = time.time()
+                result = func(*args, **kwargs)
+                execution_time = time.time() - start_time
+
+                # Создаем метрику в Prometheus
+                metric = self.get_gauge(metric_name, doc=f'execution time of {func.__name__} in milliseconds')
+                metric.set(execution_time)
+
+                return result
+
+            return wrapper
+
+        return decorator
+
+    @singleton
     def get_gauge_name(self, metric_name):
-        metric_name = f"{self.config_service.app_name()}_{metric_name}"
+        app_name = get_systemd_service_for_pid() or self.config_service.app_name()
+        metric_name = f"{app_name}_{metric_name}"
         chars_to_replace = ['[', ']', '-', '.']
         for char in chars_to_replace:
             metric_name = metric_name.replace(char, '_')
@@ -62,3 +61,8 @@ class MetricsExporter:
 
     def get_metrics_url(self, metric_name):
         return f"{self.config.frontend_url}?g0.expr={self.get_gauge_name(metric_name)}"
+
+
+metrics_exporter = injector().inject(MetricsExporter)
+
+prometheus_metric = metrics_exporter.prometheus_metric

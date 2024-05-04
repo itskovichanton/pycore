@@ -684,6 +684,8 @@ def get_systemd_service_name(process):
     return None
 
 
-def get_systemd_service_for_pid(pid):
+def get_systemd_service_for_pid(pid=None):
+    if not pid:
+        pid = os.getpid()
     process = psutil.Process(pid)
     return get_systemd_service_name(process)
