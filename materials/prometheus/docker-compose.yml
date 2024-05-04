@@ -2,12 +2,12 @@ version: "3.9"
 services:
   prometheus:
     image: prom/prometheus
-    container_name: prometheus
-    hostname: prometheus
+    container_name: prometheus.py
+    hostname: prometheus.py
     restart: always
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./alert.rules:/etc/prometheus/alert.rules
+      - ./prometheus.py.yml:/etc/prometheus.py/prometheus.py.yml
+      - ./alert.rules:/etc/prometheus.py/alert.rules
     environment:
       TZ: "Europe/Moscow"
     ports:

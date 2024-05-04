@@ -11,7 +11,7 @@ class _Config:
     enabled: bool = False
 
 
-@bean(config=("metrics.prometheus", _Config, _Config()))
+@bean(config=("metrics.prometheus.py", _Config, _Config()))
 class MetricsExporter:
     config_service: ConfigService
 
