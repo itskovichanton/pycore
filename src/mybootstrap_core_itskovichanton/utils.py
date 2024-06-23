@@ -5,6 +5,7 @@ import dataclasses
 import decimal
 import functools
 import hashlib
+import hmac
 import os
 import random
 import re
@@ -689,3 +690,8 @@ def get_systemd_service_for_pid(pid=None):
         pid = os.getpid()
     process = psutil.Process(pid)
     return get_systemd_service_name(process)
+
+
+def create_hmac_sha256(data, key):
+    hashed = hmac.new(key.encode('utf-8'), data.encode('utf-8'), hashlib.sha256)
+    return hashed.hexdigest()

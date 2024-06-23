@@ -17,7 +17,8 @@ class RedisConfig:
 
 
 def default_deserializer(value_class, value_dict):
-    return dacite.from_dict(data_class=value_class, data=value_dict, config=dacite.Config(strict=False, check_types=False))
+    return dacite.from_dict(data_class=value_class, data=value_dict,
+                            config=dacite.Config(strict=False, check_types=False))
 
 
 @bean(config=("redis", RedisConfig, RedisConfig()))
@@ -40,6 +41,8 @@ class RedisService:
 
             def __init__(self, rds: Redis):
                 self.rds = rds
+                self.hname = hname
+                self.key_prefix = key_prefix
 
             @staticmethod
             def _make_key(key: str) -> str:
@@ -66,16 +69,34 @@ class RedisService:
                 self.set(key, v)
 
             def delete(self, key: str):
-                self.rds.delete(self._make_key(key))
+                return self.rds.hdel(hname, self._make_key(key))
 
-            def get_all(self) -> Dict[str, value_class]:
-                keys = self.rds.keys(f"{hname}:*")
+            def find(self, finder: Callable[[str, value_class], bool] = None):
+                keys = self.rds.hkeys(hname)
                 result = {}
                 for key in keys:
                     key_str = key.decode('utf-8')
-                    value_bytes = self.rds.hget(hname, self._make_key(key_str))
+                    value_bytes = self.rds.hget(hname, key_str)
                     value_dict = pickle.loads(value_bytes)
-                    result[key_str[len(hname) + 1:]] = deserializer(value_class, value_dict)
+                    original_key = key_str[len(self.key_prefix) + 1:]
+                    value_deserialized = deserializer(value_class, value_dict)
+                    if finder:
+                        if finder(original_key, value_deserialized):
+                            return original_key, value_deserialized
+
+            def get_all(self, filter: Callable[[str, value_class], bool] = None) -> Dict[str, value_class]:
+                keys = self.rds.hkeys(hname)
+                result = {}
+                for key in keys:
+                    key_str = key.decode('utf-8')
+                    value_bytes = self.rds.hget(hname, key_str)
+                    value_dict = pickle.loads(value_bytes)
+                    original_key = key_str[len(self.key_prefix) + 1:]
+                    value_deserialized = deserializer(value_class, value_dict)
+                    if filter:
+                        if filter(original_key, value_deserialized):
+                            result[original_key] = value_deserialized
+
                 return result
 
             def clear(self):

@@ -24,6 +24,7 @@ class Alert:
     byFR: bool = True
     level: int = 1
     send: bool = True
+    emails: str = None
 
 
 ExceptionInterceptor = Callable[[BaseException], BaseException]
@@ -67,15 +68,14 @@ class AlertServiceImpl(AlertService):
             self.send_by_fr(a)
 
         if a.byEmail:
-            ...
-            # self.send_by_email(a)
+            self.send_by_email(a)
 
     def send_by_fr(self, a):
         self.fr_service.send(Post(project=a.subject, level=a.level, msg=a.message))
 
     def send_by_email(self, a):
         self.email_service.send(
-            Params(subject=a.subject, toEmail=self.emails, senderEmail=self.from_email, content_plain=a.message))
+            Params(subject=a.subject, toEmail=a.emails or self.emails, senderEmail=self.from_email, content_plain=a.message))
 
     def handle(self, e: BaseException, alert: Alert = Alert()):
         if not alert:

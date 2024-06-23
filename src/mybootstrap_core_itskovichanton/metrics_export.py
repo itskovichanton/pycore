@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Protocol
 
 from prometheus_client import start_http_server
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
@@ -20,8 +21,12 @@ class _Config:
     frontend_url: str = "http://localhost:9090/graph"
 
 
+class MetricsExporter(Protocol):
+    ...
+
+
 @bean(config=("metrics.prometheus", _Config, _Config()))
-class MetricsExporter:
+class MetricsExporterImpl(MetricsExporter):
     config_service: ConfigService
 
     def init(self, **kwargs):

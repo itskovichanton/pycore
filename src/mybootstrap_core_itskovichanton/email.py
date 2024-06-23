@@ -5,11 +5,13 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Protocol
 
+from src.mybootstrap_core_itskovichanton.utils import is_listable
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
 
 @dataclass
 class EmailConfig:
+    from_address: str
     username: str
     password: str
     host: str
@@ -20,7 +22,7 @@ class EmailConfig:
 
 @dataclass
 class Params:
-    toEmail: list[str]
+    toEmail: str | list[str]
     senderEmail: str
     subject: str
     content_plain: str = ""
@@ -40,20 +42,15 @@ class EmailServiceImpl(EmailService):
         if self.config is None and not a.content_plain and not a.content_html:
             return
 
-        context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-        context.set_ciphers('DEFAULT@SECLEVEL=1')
-        server = smtplib.SMTP_SSL(self.config.host, int(self.config.port), context=context)
-        server.command_encoding = self.config.encoding
-        server.login(self.config.username, self.config.password)
-        m = MIMEMultipart()
-        m["From"] = a.senderEmail,
-        m["To"] = ', '.join(a.toEmail)
-        m["Subject"] = a.subject
-        if a.content_plain:
-            m.attach(MIMEText(a.content_plain, "plain/text", _charset=self.config.encoding))
-        elif not a.content_html:
-            m.attach(MIMEText(a.content_html, "html", _charset=self.config.encoding))
+        msg = MIMEMultipart()
+        msg['To'] = ",".join(a.toEmail) if is_listable(a.toEmail) else a.toEmail
+        msg['Subject'] = a.subject
 
-        context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-        context.set_ciphers('DEFAULT@SECLEVEL=1')
-        return server.sendmail(a.senderEmail, m["To"], m.as_string())
+        # устанавливаем соединение с SMTP-сервером и отправляем сообщение
+        server = smtplib.SMTP(self.config.host, self.config.port)
+        server.login(self.config.username, self.config.password)
+        text = msg.as_string()
+        server.sendmail(from_addr=self.config.from_address,
+                        to_addrs=a.toEmail,
+                        msg=text)
+        server.quit()
