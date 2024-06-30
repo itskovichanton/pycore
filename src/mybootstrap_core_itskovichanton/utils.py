@@ -264,7 +264,7 @@ def to_dict_deep(obj, route=(),
                  is_value_object: Callable[[tuple, str], bool] = None,
                  key_mapper: Callable[[tuple, str], str] = lambda _, x: x,
                  value_mapper: Callable[[tuple, Any], Any] = lambda _, x: x):
-    if is_value_object and is_value_object(route, obj):
+    if (is_value_object and is_value_object(route, obj)) or callable(obj):
         return value_mapper(route, obj)
     if not isinstance(obj, dict) and (
             (not obj) or isinstance(obj, (Enum, str, int, float, date, datetime, Decimal, timedelta)) or isclass(obj)):

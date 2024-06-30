@@ -15,7 +15,7 @@ class ListEtcdsAction(Action):
         b = [b[key] for key in sorted(b.keys())]
         return {"key_prefix": self.rtcfg_mgr.get_key_prefix(),
                 "data": [
-                    {"value_type": str(p.value_type),
+                    {"value_type": type(p.get_value_type()),
                      "key": p.key,
                      "description": p.description,
                      "watched": p.watched,

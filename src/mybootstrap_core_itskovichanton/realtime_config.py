@@ -46,6 +46,9 @@ class RealTimeConfigEntry(Generic[T]):
     def deserialize_value(self, v: Any):
         return v
 
+    def get_value_type(self):
+        return type(self.value) if self.value else T
+
 
 class IntRealTimeConfigEntry(RealTimeConfigEntry[int]):
 
@@ -76,7 +79,7 @@ class RealTimeConfigManager(Protocol):
     def get_etcd3_client(self, hostname=None, port=None):
         ...
 
-    def put(self, key, value, host=None, port=None):
+    def put(self, key, value, host=None, port=None, key_prefix=None):
         ...
 
     def set_events(self, events: Events):

@@ -13,6 +13,8 @@ from starlette.middleware.cors import CORSMiddleware
 
 from src.mybootstrap_core_itskovichanton.alerts import AlertService, alert_on_fail
 from src.mybootstrap_core_itskovichanton.app import Application
+from src.mybootstrap_core_itskovichanton.info.backend.info import GetInfoUsecase
+from src.mybootstrap_core_itskovichanton.info.frontend.support import InfoFastAPISupport
 from src.mybootstrap_core_itskovichanton.logger import LoggerService, log
 from src.mybootstrap_core_itskovichanton.metrics_export import MetricsExporter
 from src.mybootstrap_core_itskovichanton.realtime_config import RealTimeConfigManager
@@ -62,7 +64,9 @@ class TestCoreApp(Application):
     rds: RedisService
     real_time_config: RealTimeConfigManager
     rt_fapi_support: RealtimeConfigFastAPISupport
+    info_fapi_support: InfoFastAPISupport
     my_service: MyService
+    get_info_uc: GetInfoUsecase
 
     def init(self, **kwargs):
         self.logger = self.logger_service.get_file_logger("tests")
@@ -78,6 +82,7 @@ class TestCoreApp(Application):
         print(self.config_service.app_name())
         rds = self.rds.get()
         self.fast_api = self.init_fast_api()
+        self.add_info_check()
         uvicorn.run(self.fast_api, port=3333, host="localhost")
         # self.raise_err()
         i = 0
@@ -131,9 +136,23 @@ class TestCoreApp(Application):
 
         print(v1, v2, v3)
 
+    def check1info(self, level, check_name):
+        return f"ok-{level}-{check_name}"
+
+    def cert_check(self, level, check_name):
+        return {
+            "tls": "До истечения сертификата осталось 25 дней. Свяжитесь с сертификатом СкорингБюро для получение нового сертификата",
+            "cert": "До истечения сертификата осталось 4 дня. Свяжитесь с сертификатом СкорингБюро для получение нового сертификата"
+        }
+
+    def add_info_check(self):
+        self.get_info_uc.add_info(level="INFO", name="check-1", msg=self.check1info)
+        self.get_info_uc.add_info(level="WARNING", name="cert-check", msg=self.cert_check)
+
     def init_fast_api(self) -> FastAPI:
         r = FastAPI(title='cherkizon', debug=False)
         self.rt_fapi_support.mount(r)
+        self.info_fapi_support.mount(r)
         # self.healthcheck_support.mount(r)
         r.add_middleware(HTTPLoggingMiddleware, encoding="utf-8", logger=self.logger_service.get_file_logger("http"))
         r.add_middleware(
