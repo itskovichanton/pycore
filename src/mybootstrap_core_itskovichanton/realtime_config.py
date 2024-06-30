@@ -1,4 +1,6 @@
 import os
+
+os.putenv("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
 import pickle
 import threading
 
@@ -8,11 +10,11 @@ from etcd3.exceptions import ConnectionFailedError
 from etcd3.watch import WatchResponse
 from fastapi_utils import camelcase
 from retrying import retry
+from src.mybootstrap_core_itskovichanton.utils import get_systemd_service_name
 
 from src.mybootstrap_core_itskovichanton.events import Events
 from src.mybootstrap_core_itskovichanton.validation import check_int, check_float, check_bool
 
-os.putenv("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
 from dataclasses import dataclass
 from typing import Protocol, TypeVar, Generic, Any
 
@@ -28,6 +30,7 @@ class RealTimeConfigEntry(Generic[T]):
     _lock = threading.Lock()
     _value: T = None
     description: str = None
+    category: str = None
     watched: bool = False
 
     @property
@@ -63,7 +66,11 @@ class BoolRealTimeConfigEntry(RealTimeConfigEntry[bool]):
 
 
 class RealTimeConfigManager(Protocol):
-    ...
+    def get_bindings(self) -> dict[str, RealTimeConfigEntry]:
+        ...
+
+    def get_etcd_prefix(self) -> str:
+        ...
 
 
 @dataclass
@@ -86,7 +93,7 @@ def _patch_etcd3_client():
     Etcd3Client.put_if_not_exists = _with_retry(Etcd3Client.put_if_not_exists)
 
 
-@bean(cfg=("realtime-config.etcd", _Config, _Config()))
+@bean(cfg=("realtime-config.etcd", _Config, _Config()), systemd_name=("app.systemd_name", str, None))
 class ETCDRealTimeConfigManagerImpl(RealTimeConfigManager):
     config_service: ConfigService
     events: Events
@@ -94,7 +101,11 @@ class ETCDRealTimeConfigManagerImpl(RealTimeConfigManager):
     def init(self, **kwargs):
         self._client = etcd3.client(host=self.cfg.host, port=self.cfg.port)
         _patch_etcd3_client()
+        self._bindings: dict[str, RealTimeConfigEntry] = {}
         self._bind_entries()
+
+    def get_bindings(self) -> dict[str, RealTimeConfigEntry]:
+        return self._bindings
 
     def etcd(self) -> Etcd3Client:
         return self._client
@@ -104,11 +115,13 @@ class ETCDRealTimeConfigManagerImpl(RealTimeConfigManager):
         for name, obj in vars(__import__(self.cfg.module_name)).items():
             if isinstance(obj, type) and issubclass(obj, RealTimeConfigEntry) and obj != RealTimeConfigEntry:
                 entry = inj.inject(obj)
-                setattr(self, camelcase.camel2snake(name), entry)
+                f = entry.key or camelcase.camel2snake(name)
+                setattr(self, f, entry)
+                self._bindings[f] = entry
                 self._bind_entry(entry)
 
     def _compile_key(self, key: str) -> str:
-        return f"/{self.config_service.app_name()}/{key}"
+        return f"/{self.get_etcd_prefix()}/{key}"
 
     def _bind_entry(self, e: RealTimeConfigEntry):
         if not e.key:
@@ -130,3 +143,6 @@ class ETCDRealTimeConfigManagerImpl(RealTimeConfigManager):
                     self.events.notify(get_event_name(e.key), old_value=old_value, entry=e)
 
             self._client.add_watch_callback(server_key, on_updated)
+
+    def get_etcd_prefix(self):
+        return self.systemd_name or get_systemd_service_name() or self.config_service.app_name()

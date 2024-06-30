@@ -2,20 +2,24 @@ import random
 import time
 from dataclasses import dataclass
 
+import uvicorn
+from fastapi import FastAPI
 from retrying import retry
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
+from src.mybootstrap_mvc_fastapi_itskovichanton.middleware_logging import HTTPLoggingMiddleware
 from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException
+from starlette.middleware.cors import CORSMiddleware
 
 from src.mybootstrap_core_itskovichanton.alerts import AlertService, alert_on_fail
 from src.mybootstrap_core_itskovichanton.app import Application
 from src.mybootstrap_core_itskovichanton.logger import LoggerService, log
 from src.mybootstrap_core_itskovichanton.metrics_export import MetricsExporter
 from src.mybootstrap_core_itskovichanton.realtime_config import RealTimeConfigManager
+from src.mybootstrap_core_itskovichanton.realtimeconfig.support import RealtimeConfigFastAPISupport
 
 from src.mybootstrap_core_itskovichanton.redis_service import RedisService
 from src.mybootstrap_core_itskovichanton.shell import ShellService
-from src.mybootstrap_core_itskovichanton.watchdog import Watchdog
 from test_ioc import AbstractService, MyBean
 from test_etcd import MyService
 
@@ -53,11 +57,11 @@ class TestCoreApp(Application):
     config_service: ConfigService
     logger_service: LoggerService
     shell_service: ShellService
-    watchdog: Watchdog
     mybean: MyBean
     me: MetricsExporter
     rds: RedisService
     real_time_config: RealTimeConfigManager
+    rt_fapi_support: RealtimeConfigFastAPISupport
     my_service: MyService
 
     def init(self, **kwargs):
@@ -68,11 +72,13 @@ class TestCoreApp(Application):
         print(self.config_service.app_name())
         raise CoreException("oops")
 
-    async def run(self):
+    def run(self):
         self.test_redis()
         # self.test1()
         print(self.config_service.app_name())
         rds = self.rds.get()
+        self.fast_api = self.init_fast_api()
+        uvicorn.run(self.fast_api, port=3333, host="localhost")
         # self.raise_err()
         i = 0
         # while True:
@@ -124,3 +130,19 @@ class TestCoreApp(Application):
         v3 = kv.get("k3")
 
         print(v1, v2, v3)
+
+    def init_fast_api(self) -> FastAPI:
+        r = FastAPI(title='cherkizon', debug=False)
+        self.rt_fapi_support.mount(r)
+        # self.healthcheck_support.mount(r)
+        r.add_middleware(HTTPLoggingMiddleware, encoding="utf-8", logger=self.logger_service.get_file_logger("http"))
+        r.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            # Здесь можно указать разрешенные источники, например ["http://localhost", "http://localhost:3000"]
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
+        return r

@@ -10,6 +10,7 @@ class MyAgeRealTimeConfigEntry(IntRealTimeConfigEntry):
     key = "my_age"
     description = "мой возраст"
     value = 4
+    category = "cat3"
     watched = False
 
 
@@ -18,6 +19,7 @@ class PrintMyNameTimeIntervalRealTimeConfigEntry(IntRealTimeConfigEntry):
     key = "sync_services_time_interval"
     description = "интервал задержки между выводом строк (сек)"
     value = 5
+    category = "cat2"
     watched = False
 
 
@@ -25,6 +27,7 @@ class PrintMyNameTimeIntervalRealTimeConfigEntry(IntRealTimeConfigEntry):
 class MyNameRealTimeConfigEntry(RealTimeConfigEntry[str]):
     key = "my_name"
     description = "мое имя"
+    category = "cat1"
     value = "Антон"
     watched = False
 
@@ -32,6 +35,7 @@ class MyNameRealTimeConfigEntry(RealTimeConfigEntry[str]):
 @bean
 class MyUserRealTimeConfigEntry(RealTimeConfigEntry[User]):
     key = "my_user"
+    category = "cat1"
     description = "текущий пользователь"
     value = User(age=30, name="Антон Ицкович", birthdate=today())
     watched = False

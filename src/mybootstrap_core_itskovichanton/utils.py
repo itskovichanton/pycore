@@ -1,6 +1,8 @@
 import argparse
 import asyncio
 import base64
+import subprocess
+import os
 import dataclasses
 import decimal
 import functools
@@ -695,3 +697,34 @@ def get_systemd_service_for_pid(pid=None):
 def create_hmac_sha256(data, key):
     hashed = hmac.new(key.encode('utf-8'), data.encode('utf-8'), hashlib.sha256)
     return hashed.hexdigest()
+
+
+def get_systemd_service_name():
+    try:
+        # Попробуем использовать переменную окружения `INVOCATION_ID`
+        invocation_id = os.getenv('INVOCATION_ID')
+        if invocation_id:
+            result = subprocess.run(
+                ['systemctl', 'show', '-p', 'Id', '--value', invocation_id],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=True
+            )
+            service_name = result.stdout.strip()
+            if service_name:
+                return service_name
+
+        # Переход к чтению из `/proc/self/cgroup` в случае отсутствия `INVOCATION_ID`
+        with open('/proc/self/cgroup') as f:
+            for line in f:
+                fields = line.strip().split(':')
+                if len(fields) == 3 and 'systemd' in fields[1]:
+                    path = fields[2]
+                    if '/system.slice' in path:
+                        service_name = path.split('/')[-1]
+                        return service_name
+    except Exception as e:
+        print(f"err: {e}")
+
+    return None
