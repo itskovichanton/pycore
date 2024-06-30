@@ -14,7 +14,13 @@ class ListEtcdsAction(Action):
         b = self.rtcfg_mgr.get_bindings()
         b = [b[key] for key in sorted(b.keys())]
         return [
-            {"key": p.key, "description": p.description, "watched": p.watched, "value": p.value, "category": p.category}
+            {"value_type": str(p.value_type),
+             "key": p.key,
+             "description": p.description,
+             "watched": p.watched,
+             "value": p.value,
+             "category": p.category,
+             }
             for p in b]
 
 

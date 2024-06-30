@@ -32,6 +32,7 @@ class RealTimeConfigEntry(Generic[T]):
     description: str = None
     category: str = None
     watched: bool = False
+    value_type: Any = None
 
     @property
     def value(self) -> T:
@@ -69,7 +70,7 @@ class RealTimeConfigManager(Protocol):
     def get_bindings(self) -> dict[str, RealTimeConfigEntry]:
         ...
 
-    def get_etcd_prefix(self) -> str:
+    def get_key_prefix(self) -> str:
         ...
 
 
@@ -124,7 +125,7 @@ class ETCDRealTimeConfigManagerImpl(RealTimeConfigManager):
             print(ex)
 
     def _compile_key(self, key: str) -> str:
-        return f"/{self.get_etcd_prefix()}/{key}"
+        return f"/{self.get_key_prefix()}/{key}"
 
     def _bind_entry(self, e: RealTimeConfigEntry):
         if not e.key:
@@ -147,5 +148,5 @@ class ETCDRealTimeConfigManagerImpl(RealTimeConfigManager):
 
             self._client.add_watch_callback(server_key, on_updated)
 
-    def get_etcd_prefix(self):
+    def get_key_prefix(self):
         return self.systemd_name or get_systemd_service_name() or self.config_service.app_name()
