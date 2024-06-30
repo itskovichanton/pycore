@@ -112,13 +112,16 @@ class ETCDRealTimeConfigManagerImpl(RealTimeConfigManager):
 
     def _bind_entries(self):
         inj = injector()
-        for name, obj in vars(__import__(self.cfg.module_name)).items():
-            if isinstance(obj, type) and issubclass(obj, RealTimeConfigEntry) and obj != RealTimeConfigEntry:
-                entry = inj.inject(obj)
-                f = entry.key or camelcase.camel2snake(name)
-                setattr(self, f, entry)
-                self._bindings[f] = entry
-                self._bind_entry(entry)
+        try:
+            for name, obj in vars(__import__(self.cfg.module_name)).items():
+                if isinstance(obj, type) and issubclass(obj, RealTimeConfigEntry) and obj != RealTimeConfigEntry:
+                    entry = inj.inject(obj)
+                    f = entry.key or camelcase.camel2snake(name)
+                    setattr(self, f, entry)
+                    self._bindings[f] = entry
+                    self._bind_entry(entry)
+        except BaseException as ex:
+            print(ex)
 
     def _compile_key(self, key: str) -> str:
         return f"/{self.get_etcd_prefix()}/{key}"
