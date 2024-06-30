@@ -5,7 +5,6 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Protocol
 
-from src.mybootstrap_core_itskovichanton.utils import is_listable
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
 
@@ -43,8 +42,9 @@ class EmailServiceImpl(EmailService):
             return
 
         msg = MIMEMultipart()
-        msg['To'] = ",".join(a.toEmail) if is_listable(a.toEmail) else a.toEmail
+        msg['To'] = ",".join(a.toEmail) if type(a.toEmail) == list else a.toEmail
         msg['Subject'] = a.subject
+        msg.attach(MIMEText(a.content_plain, 'plain'))
 
         # устанавливаем соединение с SMTP-сервером и отправляем сообщение
         server = smtplib.SMTP(self.config.host, self.config.port)

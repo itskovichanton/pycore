@@ -1,6 +1,7 @@
 from typing import Protocol
 
-from src.mbulak_tools.events import event_bus
+from event_bus import EventBus
+
 from src.mybootstrap_core_itskovichanton.di import injector
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
@@ -13,9 +14,10 @@ class Events(Protocol):
 
 @bean
 class EventsImpl(Events):
+    event_bus: EventBus = None
 
     def notify(self, event: str, *args, **kwargs):
-        event_bus.emit(event, *args, **kwargs)
+        self.event_bus.emit(event, *args, **kwargs)
 
 
 events = injector().inject(Events)

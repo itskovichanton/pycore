@@ -116,7 +116,8 @@ class ETCDRealTimeConfigManagerImpl(RealTimeConfigManager):
         server_key = self._compile_key(e.key)
         value_from_server, metadata = self._client.get(server_key)
         if value_from_server is None:
-            self._client.put_if_not_exists(server_key, pickle.dumps(e.value))
+            if e.value:
+                self._client.put_if_not_exists(server_key, pickle.dumps(e.value))
         else:
             e.value = e.deserialize_value(pickle.loads(value_from_server))
 
