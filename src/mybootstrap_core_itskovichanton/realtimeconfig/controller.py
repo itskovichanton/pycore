@@ -13,15 +13,16 @@ class ListEtcdsAction(Action):
     def run(self, p=None) -> Any:
         b = self.rtcfg_mgr.get_bindings()
         b = [b[key] for key in sorted(b.keys())]
-        return [
-            {"value_type": str(p.value_type),
-             "key": p.key,
-             "description": p.description,
-             "watched": p.watched,
-             "value": p.value,
-             "category": p.category,
-             }
-            for p in b]
+        return {"key_prefix": self.rtcfg_mgr.get_key_prefix(),
+                "data": [
+                    {"value_type": str(p.value_type),
+                     "key": p.key,
+                     "description": p.description,
+                     "watched": p.watched,
+                     "value": p.value,
+                     "category": p.category,
+                     }
+                    for p in b]}
 
 
 @bean

@@ -10,7 +10,7 @@ from etcd3.exceptions import ConnectionFailedError
 from etcd3.watch import WatchResponse
 from fastapi_utils import camelcase
 from retrying import retry
-from src.mybootstrap_core_itskovichanton.utils import get_systemd_service_name
+from src.mybootstrap_core_itskovichanton.utils import get_systemd_service_name, singleton
 
 from src.mybootstrap_core_itskovichanton.events import Events
 from src.mybootstrap_core_itskovichanton.validation import check_int, check_float, check_bool
@@ -32,7 +32,6 @@ class RealTimeConfigEntry(Generic[T]):
     description: str = None
     category: str = None
     watched: bool = False
-    value_type: Any = None
 
     @property
     def value(self) -> T:
@@ -67,10 +66,23 @@ class BoolRealTimeConfigEntry(RealTimeConfigEntry[bool]):
 
 
 class RealTimeConfigManager(Protocol):
+
     def get_bindings(self) -> dict[str, RealTimeConfigEntry]:
         ...
 
     def get_key_prefix(self) -> str:
+        ...
+
+    def get_etcd3_client(self, hostname=None, port=None):
+        ...
+
+    def put(self, key, value, host=None, port=None):
+        ...
+
+    def set_events(self, events: Events):
+        ...
+
+    def get_events(self) -> Events:
         ...
 
 
@@ -99,17 +111,27 @@ class ETCDRealTimeConfigManagerImpl(RealTimeConfigManager):
     config_service: ConfigService
     events: Events
 
+    @singleton
+    def get_etcd3_client(self, hostname=None, port=None):
+        if not (hostname and port):
+            hostname = self.cfg.host
+            port = self.cfg.port
+        return etcd3.client(host=hostname, port=port)
+
+    def set_events(self, events: Events):
+        self.events = events
+
     def init(self, **kwargs):
-        self._client = etcd3.client(host=self.cfg.host, port=self.cfg.port)
+        self._client = self.get_etcd3_client()
         _patch_etcd3_client()
         self._bindings: dict[str, RealTimeConfigEntry] = {}
         self._bind_entries()
 
+    def get_events(self) -> Events:
+        return self.events
+
     def get_bindings(self) -> dict[str, RealTimeConfigEntry]:
         return self._bindings
-
-    def etcd(self) -> Etcd3Client:
-        return self._client
 
     def _bind_entries(self):
         inj = injector()
@@ -124,8 +146,8 @@ class ETCDRealTimeConfigManagerImpl(RealTimeConfigManager):
         except BaseException as ex:
             print(ex)
 
-    def _compile_key(self, key: str) -> str:
-        return f"/{self.get_key_prefix()}/{key}"
+    def _compile_key(self, key: str, key_prefix=None) -> str:
+        return f"/{key_prefix or self.get_key_prefix()}/{key}"
 
     def _bind_entry(self, e: RealTimeConfigEntry):
         if not e.key:
@@ -143,10 +165,14 @@ class ETCDRealTimeConfigManagerImpl(RealTimeConfigManager):
                 event = next(filter(lambda evnt: isinstance(evnt, PutEvent), external_value_response.events), None)
                 if event:
                     old_value = e.value
-                    e.value = e.deserialize_value(event.value)
-                    self.events.notify(get_event_name(e.key), old_value=old_value, entry=e)
+                    e.value = e.deserialize_value(pickle.loads(event.value))
+                    if self.events:
+                        self.events.notify(get_event_name(e.key), old_value=old_value, entry=e)
 
             self._client.add_watch_callback(server_key, on_updated)
 
     def get_key_prefix(self):
         return self.systemd_name or get_systemd_service_name() or self.config_service.app_name()
+
+    def put(self, key, value, host=None, port=None, key_prefix=None):
+        return self.get_etcd3_client(host, port).put(self._compile_key(key, key_prefix), pickle.dumps(value))

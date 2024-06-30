@@ -17,7 +17,8 @@ class EventsImpl(Events):
     event_bus: EventBus = None
 
     def notify(self, event: str, *args, **kwargs):
-        self.event_bus.emit(event, *args, **kwargs)
+        if self.event_bus:
+            self.event_bus.emit(event, *args, **kwargs)
 
 
 events = injector().inject(Events)

@@ -22,7 +22,7 @@ class PrintMyNameTimeIntervalRealTimeConfigEntry(IntRealTimeConfigEntry):
     value = 5
     value_type = int
     category = "cat2"
-    watched = False
+    watched = True
 
 
 @bean
