@@ -108,7 +108,7 @@ class TimedCompressedRotatingFileHandler(logging.handlers.TimedRotatingFileHandl
             if len(s) > self.backupCount:
                 s.sort()
                 os.remove(s[0])
-        # #print "%s -> %s" % (self.baseFilename, dfn)
+        # print "%s -> %s" % (self.baseFilename, dfn)
         # if self.log_compressor:
         #     dfn = self.log_compressor.compress(log_type=self.name, file=dfn)
         if self.encoding:
@@ -220,7 +220,7 @@ def lg(logger, desc=None, action=None, alert=False):
     if not isinstance(logger, logging.Logger):
         logger = logging.getLogger(str(logger))
     logger.info(s)
-    #print(s)
+    print(s)
     if alert:
         alerts.alert_service.send(Alert(subject=action, message=desc))
 
@@ -234,7 +234,8 @@ def async_log(logger, entry, tp):
 
 
 def log(_logger, _fields: list = None, _desc=None, _func=None, _action=None, _alert_on_fail: bool = False,
-        _alert_on_success: bool = False, _suppress_fail: bool = False, _include_elapsed_time: bool = True):
+        _alert_on_success: bool = False, _suppress_fail: bool = False, _include_elapsed_time: bool = True,
+        with_extra: bool = False):
     def log_decorator_info(func):
         @functools.wraps(func)
         def log_decorator_wrapper(self, *args, **kwargs):
@@ -259,12 +260,15 @@ def log(_logger, _fields: list = None, _desc=None, _func=None, _action=None, _al
             result = None
             time_before = int(round(time.time() * 1000))
             try:
+                if with_extra:
+                    kwargs["__logextra__"] = {}
                 result = func(self, *args, **kwargs)
+                e["extra"] = kwargs.get("__logextra__")
                 if _include_elapsed_time:
                     e["elapsed"] = int(round(time.time() * 1000) - time_before)
                 e["result"] = result
                 if _alert_on_success:
-                    #print(e)
+                    print(e)
                     alerts.alert_service.send(Alert(subject=_action, message=e))
 
                 async_log(logger, e, "info")

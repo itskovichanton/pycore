@@ -454,7 +454,11 @@ def repeat(interval=0, count=-1):
         def wrapper(*args, **kwargs):
             n = 0
             while (count >= 0 and n < count) or (count < 0):
-                func(*args, **kwargs)
+                try:
+                    func(*args, **kwargs)
+                except BaseException as ex:
+                    if "takes" not in str(ex):
+                        raise ex
                 n += 1
                 if interval > 0:
                     time.sleep(interval)
