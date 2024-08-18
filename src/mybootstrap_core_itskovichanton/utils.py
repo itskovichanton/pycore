@@ -546,26 +546,42 @@ def catch(_func=None, *, exception=None, handler=None, silent=False):
         return decorator_catch(_func)
 
 
-def singleton(func):
-    singleton_cache = {}
+@omittable_parentheses()
+def singleton(ttl=None):
+    def decorator(func):
+        singleton_cache = {}
+        cache_timestamps = {}
 
-    def calc_hash(k):
-        try:
-            return hash(k)
-        except:
-            return str(id(k))
+        def calc_hash(k):
+            try:
+                return hash(k)
+            except:
+                return str(id(k))
 
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        key = args
-        if kwargs:
-            key += (frozenset(kwargs.items()),)
-        key = tuple(calc_hash(k) for k in key)
-        if key not in singleton_cache:
-            singleton_cache[key] = func(*args, **kwargs)
-        return singleton_cache[key]
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            nonlocal ttl
+            key = args
+            if kwargs:
+                key += (frozenset(kwargs.items()),)
+            key = tuple(calc_hash(k) for k in key)
 
-    return wrapper
+            # Проверка времени жизни кеша
+            if key in cache_timestamps:
+                if ttl is not None and (time.time() - cache_timestamps[key]) > ttl:
+                    del singleton_cache[key]
+                    del cache_timestamps[key]
+
+            # Если ключ в кеше отсутствует, вычисляем значение и добавляем в кеш
+            if key not in singleton_cache:
+                singleton_cache[key] = func(*args, **kwargs)
+                cache_timestamps[key] = time.time()
+
+            return singleton_cache[key]
+
+        return wrapper
+
+    return decorator
 
 
 def scheduled(everyday_time):
