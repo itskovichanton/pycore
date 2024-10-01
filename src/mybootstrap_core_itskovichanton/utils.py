@@ -13,6 +13,7 @@ import random
 import re
 import string
 import sys
+import threading
 import time
 import traceback
 import urllib
@@ -28,6 +29,7 @@ from typing import Any, Callable, List, Set, Tuple, TypeVar, Dict
 from urllib.error import URLError
 from urllib.parse import urlparse, urlencode, urlunparse
 
+import greenletio
 import psutil
 import schedule
 from benedict import benedict
@@ -264,6 +266,10 @@ def to_dict_deep(obj, route=(),
                  is_value_object: Callable[[tuple, str], bool] = None,
                  key_mapper: Callable[[tuple, str], str] = lambda _, x: x,
                  value_mapper: Callable[[tuple, Any], Any] = lambda _, x: x):
+    if obj is None:
+        return None
+    if isinstance(obj, Enum):
+        return value_mapper(route, obj.value)
     if (is_value_object and is_value_object(route, obj)) or callable(obj):
         return value_mapper(route, obj)
     if not isinstance(obj, dict) and (
@@ -271,7 +277,7 @@ def to_dict_deep(obj, route=(),
         return value_mapper(route, obj)
     if isinstance(obj, (List, Set, Tuple)):
         return [to_dict_deep(x, route, is_value_object, key_mapper, value_mapper) for x in list(obj)]
-    r = {}
+    r = None
     if isinstance(obj, CaseInsensitiveDict):
         obj = dict(obj)
     try:
@@ -282,10 +288,14 @@ def to_dict_deep(obj, route=(),
             attr = key_mapper(new_route, attr)
             if isinstance(value, (List, Set, Tuple)):
                 value = [to_dict_deep(x, new_route, is_value_object, key_mapper, value_mapper) for x in value]
+                if not r:
+                    r = {}
                 r.setdefault(attr, value)
             else:
                 try:
                     value = to_dict_deep(value, new_route, is_value_object, key_mapper, value_mapper)
+                    if not r:
+                        r = {}
                     r.setdefault(attr, value)
                 except BaseException as e1:
                     # print("attr: ", attr, "\terror: ", e1)
@@ -753,3 +763,8 @@ def get_systemd_service_for_pid(pid=None):
 def create_hmac_sha256(data, key):
     hashed = hmac.new(key.encode('utf-8'), data.encode('utf-8'), hashlib.sha256)
     return hashed.hexdigest()
+
+
+def get_current_thread_id():
+    current_thread = threading.current_thread()
+    return current_thread.ident

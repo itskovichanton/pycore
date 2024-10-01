@@ -29,6 +29,9 @@ from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep,
 
 class LoggerService(Protocol):
 
+    def get_simple_file_logger(self, name) -> Logger:
+        ...
+
     def get_graylog_logger(self, name: str) -> Logger:
         ...
 
@@ -138,6 +141,24 @@ class LoggerServiceImpl(LoggerService):
     config_service: ConfigService
     log_compressor: LogCompressor = None
 
+    def get_simple_file_logger(self, name) -> Logger:
+        logger = logging.getLogger(name)
+        logger.setLevel(logging.DEBUG)  # Уровень логирования
+
+        # Создание обработчика, который будет записывать лог-файлы
+        file_handler = logging.FileHandler(
+            f"{os.path.join(self.config_service.dir('logs'), name)}-{self.config_service.app_name()}.txt",
+        )
+        file_handler.setLevel(logging.DEBUG)
+
+        # Создание форматтера и добавление его в обработчик
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(formatter)
+
+        # Добавление обработчика в логгер
+        logger.addHandler(file_handler)
+        return logger
+
     def get_graylog_logger(self, name: str) -> Logger:
         r = logging.getLogger(name)
         if hasattr(r, "inited"):
@@ -237,8 +258,10 @@ def log(_logger, _fields: list = None, _desc=None, _func=None, _action=None, _al
         _alert_on_success: bool = False, _suppress_fail: bool = False, _include_elapsed_time: bool = True,
         with_extra: bool = False):
     def log_decorator_info(func):
+
         @functools.wraps(func)
         def log_decorator_wrapper(self, *args, **kwargs):
+
             args_passed_in_function = [repr(a) for a in args]
             fields = _fields
             kwargs_passed_in_function = {k: v for k, v in kwargs.items() if (fields is None) or (k in fields)}
