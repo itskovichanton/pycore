@@ -15,7 +15,7 @@ from typing import Protocol
 
 import requests
 from paprika import threaded
-from pygelf import GelfUdpHandler
+# from pygelf import GelfUdpHandler
 from pythonjsonlogger import jsonlogger
 from requests import Session
 from src.mybootstrap_ioc_itskovichanton import ioc
@@ -173,8 +173,8 @@ class LoggerServiceImpl(LoggerService):
         props = ioc.context.properties
         r.setLevel(props.get(logger_settings_prefix + ".level", logging.INFO))
         # graylog_handler =  graypy.GELFTCPHandler('0.0.0.0', 12201)
-        graylog_handler = GelfUdpHandler(host='localhost', port=12201)
-        r.addHandler(graylog_handler)
+        # graylog_handler = GelfUdpHandler(host='localhost', port=12201)
+        # r.addHandler(graylog_handler)
         r.addFilter(ContextFilter())
         r.inited = True
         return r
@@ -203,6 +203,7 @@ class LoggerServiceImpl(LoggerService):
             logger.info('Outgoing', extra=extra)
 
         session = requests.Session()
+        session.headers["User-Agent"] = self.config_service.app_name()
         session.hooks['response'].append(_log_roundtrip)
         return session
 

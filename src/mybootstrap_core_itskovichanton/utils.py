@@ -244,6 +244,8 @@ def list_to_map(obj):
 
 
 def to_dict(obj, remove_none_values: bool = False):
+    if isinstance(obj, Dict):
+        return obj
     try:
         obj_dict = dict(obj)
     except:
@@ -298,18 +300,52 @@ def to_dict_deep(obj, route=(),
                         r = {}
                     r.setdefault(attr, value)
                 except BaseException as e1:
-                    # print("attr: ", attr, "\terror: ", e1)
+                    print("attr: ", attr, "\terror: ", e1)
                     ...
         return r
     except BaseException as e:
-        # print("out of for\t")
-        # print("error: ", e)
+        print("out of for\t")
+        print("error: ", e)
         return value_mapper(route, obj)
 
 
 # https://stackoverflow.com/questions/7555335/how-to-convert-a-string-from-cp-1251-to-utf-8
 def win1251_to_utf8(s: str):
     return s.encode("cp1251").decode('cp1251').encode('utf8')
+
+
+def convert_windows1251_to_utf8(text):
+    # Таблица маппинга русских символов Windows-1251 на UTF-8
+    mapping = {
+        1040: 'А', 1041: 'Б', 1042: 'В', 1043: 'Г',
+        1044: 'Д', 1045: 'Е', 1028: 'Ё', 1046: 'Ж',
+        1047: 'З', 1048: 'И', 1049: 'Й', 1050: 'К',
+        1051: 'Л', 1052: 'М', 1053: 'Н', 1054: 'О',
+        1055: 'П', 1056: 'Р', 1057: 'С', 1058: 'Т',
+        1059: 'У', 1060: 'Ф', 1061: 'Х', 1062: 'Ц',
+        1063: 'Ч', 1064: 'Ш', 1065: 'Щ', 1066: 'Ъ',
+        1067: 'Ы', 1068: 'Ь', 1069: 'Э', 1070: 'Ю',
+        1071: 'Я', 1072: 'а', 1073: 'б', 1074: 'в',
+        1075: 'г', 1076: 'д', 1077: 'е', 1100: 'ё',
+        1078: 'ж', 1079: 'з', 1080: 'и', 1081: 'й',
+        1082: 'к', 1083: 'л', 1084: 'м', 1085: 'н',
+        1086: 'о', 1087: 'п', 1088: 'р', 1089: 'с',
+        1090: 'т', 1091: 'у', 1092: 'ф', 1093: 'х',
+        1094: 'ц', 1095: 'ч', 1096: 'ш', 1097: 'щ',
+        1098: 'ъ', 1099: 'ы', 1100: 'ь', 1101: 'э',
+        1102: 'ю', 1103: 'я',
+    }
+
+    utf8_text = ''
+
+    for char in text:
+        char_code = ord(char)
+        if char_code in mapping:
+            utf8_text += mapping[char_code]
+        else:
+            utf8_text += char  # Оставляем символ без изменений, если он не в маппинге
+
+    return utf8_text
 
 
 def utf8_to_win1251(s: str):
@@ -768,3 +804,7 @@ def create_hmac_sha256(data, key):
 def get_current_thread_id():
     current_thread = threading.current_thread()
     return current_thread.ident
+
+
+def to_base64(s, encoding='utf-8') -> str:
+    return base64.b64encode(s.encode(encoding)).decode("ascii")
