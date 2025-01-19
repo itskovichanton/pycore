@@ -184,12 +184,17 @@ class LoggerServiceImpl(LoggerService):
         logger = self.get_file_logger(logger_name)
 
         def _log_roundtrip(response, *args, **kwargs):
+            req = response.request.body
+            try:
+                req = req.decode()
+            except:
+                ...
             extra = {
                 'req': {
                     'method': response.request.method,
                     'url': response.request.url,
                     'headers': response.request.headers,
-                    'body': response.request.body,
+                    'body': req,
                 },
                 'res': {
                     'code': response.status_code,
