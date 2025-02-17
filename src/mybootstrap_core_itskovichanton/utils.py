@@ -288,7 +288,12 @@ def to_dict_deep(obj, route=(),
                 continue
             new_route = (*route, attr)
             attr = key_mapper(new_route, attr)
-            if isinstance(value, (List, Set, Tuple)):
+            if (is_value_object and is_value_object(route, value)) or callable(obj):
+                value = value_mapper(route, value)
+                if not r:
+                    r = {}
+                r.setdefault(attr, value)
+            elif isinstance(value, (List, Set, Tuple)):
                 value = [to_dict_deep(x, new_route, is_value_object, key_mapper, value_mapper) for x in value]
                 if not r:
                     r = {}
