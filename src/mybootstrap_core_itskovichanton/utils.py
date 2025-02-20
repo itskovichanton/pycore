@@ -407,6 +407,8 @@ def fill_random(cl, pkg=None, generators: dict[type, Callable[[], Any]] = None):
     if type(cl) == EnumType:
         values = [e.value for e in cl]
         return values[random.randint(0, len(values) - 1)]
+    if cl == object:
+        return f"OBJECT<{random_str(random.randint(0, 20))}>"
 
     o = cl()
     print(cl)
