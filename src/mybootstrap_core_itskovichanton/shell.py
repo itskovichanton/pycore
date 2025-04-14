@@ -1,4 +1,8 @@
 import subprocess
+
+from src.mybootstrap_ioc_itskovichanton.config import ConfigService
+
+from src.mybootstrap_core_itskovichanton.logger import log
 from src.mybootstrap_core_itskovichanton.utils import is_windows
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException
@@ -15,6 +19,7 @@ class ShellService(Protocol):
 
 @bean(executor="sh.executor", encoding=("sh.encoding", str, "utf-8"))
 class ShellServiceImpl(ShellService):
+    config_service: ConfigService
 
     def popen(self, *args, encoding: str = None, cwd=None):
         if is_windows():
@@ -23,6 +28,7 @@ class ShellServiceImpl(ShellService):
             encoding = self.encoding
         return subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding=encoding, cwd=cwd)
 
+    @log("shell")
     def execute(self, *args, encoding: str = None, cwd=None):
         output, error = self.popen(*args, encoding=encoding, cwd=cwd).communicate()
         if error:
