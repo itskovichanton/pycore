@@ -68,7 +68,6 @@ class RedisService:
                     self.rds.expire(f"{hname}:{key}", ttl)
 
             def update(self, key: str, updater: Callable[[value_class], Any]):
-                key = self._make_key(key)
                 v = self.get(key)
                 if v is None:
                     v = value_class()
