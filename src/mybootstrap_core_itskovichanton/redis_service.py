@@ -55,18 +55,26 @@ class RedisService:
                 value_dict = pickle.loads(value_bytes)
                 return deserializer(value_class, value_dict)
 
-            def set(self, key: str, value: value_class):
+            def set(self, key: str, value: value_class, ttl=None):
                 value = pre_serializer(value)
-                value_dict = asdict(value)
+                try:
+                    value_dict = asdict(value)
+                except:
+                    value_dict = value
                 value_bytes = pickle.dumps(value_dict)
-                self.rds.hset(hname, self._make_key(key), value_bytes)
+                key = self._make_key(key)
+                self.rds.hset(hname, key, value_bytes)
+                if ttl:
+                    self.rds.expire(f"{hname}:{key}", ttl)
 
             def update(self, key: str, updater: Callable[[value_class], Any]):
+                key = self._make_key(key)
                 v = self.get(key)
                 if v is None:
                     v = value_class()
                 updater(v)
                 self.set(key, v)
+                return v
 
             def delete(self, key: str):
                 return self.rds.hdel(hname, self._make_key(key))
