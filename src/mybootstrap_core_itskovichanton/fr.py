@@ -40,7 +40,7 @@ class FRServiceImpl(FRService):
         if not isinstance(a.msg, dict):
             a.msg = to_dict_deep(a.msg)
 
-        a.msg = trim_string(a.msg, 4000)
+        a.msg = trim_string(str(a.msg), 4000)
 
         with suppress(BaseException):
             requests.request("POST", self.url + "/postMsg",
