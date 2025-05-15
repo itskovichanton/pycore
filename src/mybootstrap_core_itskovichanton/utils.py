@@ -189,7 +189,9 @@ def generate_tag() -> str:
     return str(uuid.uuid1().int)
 
 
-def generate_uid() -> str:
+def generate_uid(version: int = 1) -> str:
+    if version == 4:
+        return str(uuid.uuid4())
     return str(uuid.uuid1())
 
 
@@ -312,11 +314,6 @@ def to_dict_deep(obj, route=(),
         print("out of for\t")
         print("error: ", e)
         return value_mapper(route, obj)
-
-
-# https://stackoverflow.com/questions/7555335/how-to-convert-a-string-from-cp-1251-to-utf-8
-def win1251_to_utf8(s: str):
-    return s.encode("cp1251").decode('cp1251').encode('utf8')
 
 
 def convert_windows1251_to_utf8(text):
@@ -570,7 +567,7 @@ def is_listable(a):
 
 
 def silent_catch(_func=None, *, exception=None):
-    return catch(_func=_func, exception=exception, silent=True)
+    return catch(_func=_func, exception=exception, silent=False)
 
 
 def catch(_func=None, *, exception=None, handler=None, silent=False):
