@@ -812,3 +812,11 @@ def get_current_thread_id():
 
 def to_base64(s, encoding='utf-8') -> str:
     return base64.b64encode(s.encode(encoding)).decode("ascii")
+
+
+def get_by_route(m: dict, *args):
+    for s in args:
+        m = m.get(s)
+        if m is None:
+            return
+    return m
