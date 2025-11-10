@@ -38,7 +38,8 @@ class LoggerService(Protocol):
     def get_logged_session(self, logger_name="outgoing-requests") -> Session:
         ...
 
-    def get_file_logger(self, name: str, encoding: str = "utf-8", formatter=None) -> Logger:
+    def get_file_logger(self, name: str, encoding: str = "utf-8",
+                        formatter=None, max_line_len: int = 3000) -> Logger:
         ...
 
 
@@ -213,7 +214,7 @@ class LoggerServiceImpl(LoggerService):
         return session
 
     def get_file_logger(self, name: str, encoding: str = "utf-8",
-                        formatter=None) -> Logger:
+                        formatter=None, max_line_len: int = 3000) -> Logger:
         r = logging.getLogger(name)
         if hasattr(r, "inited"):
             return r
@@ -232,7 +233,7 @@ class LoggerServiceImpl(LoggerService):
             backup_count=props.get(logger_settings_prefix + ".backup_count", 365))
 
         if not formatter:
-            formatter = SimpleJsonFormatter("%(t)s %(msg)s")
+            formatter = SimpleJsonFormatter("%(t)s %(msg)s", trim_values_len=max_line_len)
         log_handler.setFormatter(formatter)
 
         r.addHandler(log_handler)
@@ -248,11 +249,10 @@ def lg(logger, desc=None, action=None, alert=False):
         logger = logging.getLogger(str(logger))
     logger.info(s)
     print(s)
-    if alert:
-        alerts.alert_service.send(Alert(subject=action, message=desc))
+    # if alert:
+    #     alerts.alert_service.send(Alert(subject=action, message=desc))
 
 
-@threaded
 def async_log(logger, entry, tp):
     if tp == "error":
         logger.error(entry)

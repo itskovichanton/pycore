@@ -75,6 +75,9 @@ class RedisService:
                 self.set(key, v)
                 return v
 
+            def get_keys(self):
+                return [k[len(self.key_prefix) + 1:].decode("utf-8") for k in self.rds.hkeys(hname)]
+
             def delete(self, key: str):
                 return self.rds.hdel(hname, self._make_key(key))
 

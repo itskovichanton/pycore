@@ -36,6 +36,7 @@ from benedict import benedict
 from dacite import from_dict
 from dataclasses_json import LetterCase, dataclass_json
 from dateutil.relativedelta import relativedelta
+from xsdata.models.datatype import XmlDate, XmlDateTime
 
 from src.mybootstrap_core_itskovichanton.structures import CaseInsensitiveDict
 
@@ -266,6 +267,11 @@ def encode_json_value(_, obj):
     return obj
 
 
+def is_standard_value_object(obj):
+    return isinstance(obj,
+                      (Enum, str, int, float, date, datetime, Decimal, timedelta, XmlDate, XmlDateTime)) or isclass(obj)
+
+
 def to_dict_deep(obj, route=(),
                  is_value_object: Callable[[tuple, str], bool] = None,
                  key_mapper: Callable[[tuple, str], str] = lambda _, x: x,
@@ -276,8 +282,7 @@ def to_dict_deep(obj, route=(),
         return value_mapper(route, obj.value)
     if (is_value_object and is_value_object(route, obj)) or callable(obj):
         return value_mapper(route, obj)
-    if not isinstance(obj, dict) and (
-            (not obj) or isinstance(obj, (Enum, str, int, float, date, datetime, Decimal, timedelta)) or isclass(obj)):
+    if not isinstance(obj, dict) and ((not obj) or is_standard_value_object(obj)):
         return value_mapper(route, obj)
     if isinstance(obj, (List, Set, Tuple)):
         return [to_dict_deep(x, route, is_value_object, key_mapper, value_mapper) for x in list(obj)]
@@ -290,7 +295,7 @@ def to_dict_deep(obj, route=(),
                 continue
             new_route = (*route, attr)
             attr = key_mapper(new_route, attr)
-            if (is_value_object and is_value_object(route, value)) or callable(obj):
+            if (is_value_object and is_value_object(route, value)) or callable(value) or is_standard_value_object(value):
                 value = value_mapper(route, value)
                 if not r:
                     r = {}
