@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import base64
+import socket
 import subprocess
 import os
 import dataclasses
@@ -31,6 +32,7 @@ from urllib.parse import urlparse, urlencode, urlunparse
 
 import greenletio
 import psutil
+import requests
 import schedule
 from benedict import benedict
 from dacite import from_dict
@@ -295,7 +297,8 @@ def to_dict_deep(obj, route=(),
                 continue
             new_route = (*route, attr)
             attr = key_mapper(new_route, attr)
-            if (is_value_object and is_value_object(route, value)) or callable(value) or is_standard_value_object(value):
+            if (is_value_object and is_value_object(route, value)) or callable(value) or is_standard_value_object(
+                    value):
                 value = value_mapper(route, value)
                 if not r:
                     r = {}
@@ -825,3 +828,97 @@ def get_by_route(m: dict, *args):
         if m is None:
             return
     return m
+
+
+def get_method_name(m):
+    if hasattr(m, "__self__") and m.__self__ is not None:
+        cls = m.__self__.__class__.__name__
+    else:
+        cls = m.__qualname__.split(".")[0]
+    return f"{cls}.{m.__name__}"
+
+
+@dataclasses.dataclass
+class UrlCheckResult:
+    host: str | None
+    port: int | None
+    response_time_ms: float = None
+    status: str | None = None
+    error: str | None = None
+
+
+def check_url_availability_with_socket(host, port, timeout=3) -> UrlCheckResult:
+    start = time.time()
+    status = "available"
+    error = None
+
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            pass
+    except Exception as e:
+        status = "unavailable"
+        error = str(e)
+    finally:
+        response_time = round((time.time() - start) * 1000, 2)
+
+    return UrlCheckResult(
+        host=host,
+        port=port,
+        status=status,
+        error=error,
+        response_time_ms=response_time
+    )
+
+
+def check_url_availability_by_url(url: str, timeout: int = 3, by_http_request=False) -> UrlCheckResult:
+    parsed = urlparse(url)
+
+    host = parsed.hostname
+    port = parsed.port
+
+    # if host is None or port is None:
+    #     return UrlCheckResult(error="Некорректный URL, должен быть вида схема://хост:порт", host=host, port=port)
+
+    if by_http_request:
+        return check_url_availability_by_url_with_http_request(url, timeout)
+
+    return check_url_availability_with_socket(host, port, timeout)
+
+
+def check_url_availability_by_url_with_http_request(url: str, timeout: int = 3) -> UrlCheckResult:
+    response = None
+    parsed = urlparse(url)
+    host = parsed.hostname
+    port = parsed.port
+    r = UrlCheckResult(host=host, port=port, status="available")
+    try:
+        response = requests.head(url, timeout=timeout)
+        response.raise_for_status()
+        return r
+    except BaseException as ex:
+        msg = str(ex)
+        if response:
+            msg += f", response: {trim_string(response.text, limit=300)}"
+        r.error = msg
+        r.status = "unavailable"
+        return r
+
+
+def remove_last_path_fragments(url: str, n: int = 1) -> str:
+    parsed = urlparse(url)
+
+    parts = parsed.path.rstrip("/").split("/")
+
+    if n > 0:
+        parts = parts[:-n] if n < len(parts) else []
+
+    new_path = "/" + "/".join(parts) if parts else ""
+
+    return urlunparse((
+        parsed.scheme,
+        parsed.netloc,
+        new_path,
+        parsed.params,
+        parsed.query,
+        parsed.fragment
+    ))

@@ -4,10 +4,13 @@ import glob
 import logging
 import logging.handlers
 import os
+import threading
 import time
 import traceback
 import uuid
 import zipfile
+from collections import deque, defaultdict
+from dataclasses import dataclass, field
 from datetime import datetime
 from logging import Logger
 from pathlib import Path
@@ -24,10 +27,41 @@ from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
 from src.mybootstrap_core_itskovichanton import alerts
 from src.mybootstrap_core_itskovichanton.alerts import Alert
-from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, unescape_str, singleton
+from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, unescape_str, singleton, generate_uid, \
+    UrlCheckResult, check_url_availability_with_socket, check_url_availability_by_url
+
+
+@dataclass
+class RequestStats:
+    times: deque = field(default_factory=lambda: deque(maxlen=200))
+    connection_success_count: int = 0
+    connection_fail_count: int = 0
+    response_statuses: dict[str, int] = field(default_factory=lambda: defaultdict(int))
+    last_err: str = None
+
+    @property
+    def avg_time(self):
+        return sum(self.times) / len(self.times) if self.times else 0.0
+
+    @property
+    def max_time(self):
+        return max(self.times) if self.times else 0.0
+
+    def summary(self):
+        return {
+            "connection_success_count": self.connection_success_count,
+            "connection_fail_count": self.connection_fail_count,
+            "response_statuses": self.response_statuses,
+            "last_err": self.last_err,
+            "avg_time": self.avg_time,
+            "max_time": self.max_time,
+        }
 
 
 class LoggerService(Protocol):
+
+    def get_session_stats(self):
+        ...
 
     def get_simple_file_logger(self, name) -> Logger:
         ...
@@ -35,7 +69,7 @@ class LoggerService(Protocol):
     def get_graylog_logger(self, name: str) -> Logger:
         ...
 
-    def get_logged_session(self, logger_name="outgoing-requests") -> Session:
+    def get_logged_session(self, logger_name="outgoing-requests", url=None, route=None) -> Session:
         ...
 
     def get_file_logger(self, name: str, encoding: str = "utf-8",
@@ -137,10 +171,125 @@ class TimedCompressedRotatingFileHandler(logging.handlers.TimedRotatingFileHandl
         os.remove(dfn)
 
 
+def _adapt_body(body):
+    if body is None:
+        return None
+
+    if isinstance(body, bytes):
+        return f"binary[{len(body)}]"
+
+    text = str(body)
+    if len(text) > 1000:
+        return text[:1000] + "...(truncated)"
+    return text
+
+
+@dataclass
+class SessionStats:
+    stats: dict[str, RequestStats] = None
+    availability: UrlCheckResult = None
+
+
+@singleton(ttl=5 * 60)
+def _check_url_availability(url):
+    return check_url_availability_by_url(url)
+
+
+class SessionWithStats(requests.Session):
+
+    def __init__(self, name, logger=None, url=None, route=None):
+        super().__init__()
+        self.name = name
+        self._stats = defaultdict(RequestStats)
+        self._lock = threading.Lock()
+        self._logger = logger or logging.getLogger(name)
+        self._url = url
+        self._route = route
+
+    @property
+    def stats(self) -> SessionStats:
+        r = SessionStats(stats=self._stats)
+        if self._url:
+            r.availability = _check_url_availability(self._url)
+        return r
+
+    def request(self, method, url, *args, **kwargs):
+
+        start = time.perf_counter()
+        exc = None
+        response = None
+
+        # Запоминаем тело запроса
+        req_body = kwargs.get("data") or kwargs.get("json") or None
+        req_headers = kwargs.get("headers")
+
+        if not req_headers:
+            req_headers = {}
+
+        if self.name:
+            req_headers["User-Agent"] = self.name
+        req_headers["X-Request-ID"] = generate_uid()
+
+        try:
+            response = super().request(method, url, *args, **kwargs)
+            return response
+        except Exception as e:
+            exc = e
+            raise
+        finally:
+            elapsed = time.perf_counter() - start
+            if self._route:
+                if callable(self._route):
+                    route = self._route(url.split("?")[0])
+                else:
+                    route = self._route
+            else:
+                route = url.split("?")[0]
+
+            # Обновляем статистику
+            with self._lock:
+                st = self._stats[route]
+                st.times.append(elapsed)
+                if exc is None:
+                    st.connection_success_count += 1
+                else:
+                    st.connection_fail_count += 1
+                    st.last_err = str(exc)
+                if response:
+                    st.response_statuses[str(response.status_code)] += 1
+
+            # Логирование
+            extra = {
+                "req": {
+                    "method": method,
+                    "url": url,
+                    "headers": dict(req_headers) if req_headers else None,
+                    "body": _adapt_body(req_body),
+                },
+                "res": {
+                    "code": response.status_code if response else None,
+                    "reason": response.reason if response else None,
+                    "url": response.url if response else None,
+                    "headers": dict(response.headers) if response else None,
+                    "body": _adapt_body(response.content if response else None),
+                },
+                "err": str(exc) if exc else None,
+                "elapsed": elapsed,
+            }
+
+            self._logger.info(extra)
+
+
 @bean
 class LoggerServiceImpl(LoggerService):
     config_service: ConfigService
     log_compressor: LogCompressor = None
+
+    def init(self, **kwargs):
+        self._sessions: dict[str, SessionWithStats] = defaultdict(SessionWithStats)
+
+    def get_session_stats(self):
+        return {name: stats.stats for name, stats in self._sessions.items()}
 
     def get_simple_file_logger(self, name) -> Logger:
         logger = logging.getLogger(name)
@@ -181,37 +330,11 @@ class LoggerServiceImpl(LoggerService):
         return r
 
     @singleton
-    def get_logged_session(self, logger_name="outgoing-requests") -> Session:
+    def get_logged_session(self, logger_name="outgoing-requests", url=None, route=None) -> Session:
         logger = self.get_file_logger(logger_name)
-
-        def _log_roundtrip(response, *args, **kwargs):
-            req = response.request.body
-            try:
-                req = req.decode()
-            except:
-                ...
-            extra = {
-                'req': {
-                    'method': response.request.method,
-                    'url': response.request.url,
-                    'headers': response.request.headers,
-                    'body': req,
-                },
-                'res': {
-                    'code': response.status_code,
-                    'reason': response.reason,
-                    'url': response.url,
-                    'headers': response.headers,
-                    'body': response.text
-                },
-                # 'elapsed': time.time() - response.request.start_time,
-            }
-            logger.info('Outgoing', extra=extra)
-
-        session = requests.Session()
-        session.headers["User-Agent"] = self.config_service.app_name()
-        session.hooks['response'].append(_log_roundtrip)
-        return session
+        r = SessionWithStats(f"{self.config_service.app_name()}:{logger_name}", logger, url, route)
+        self._sessions[logger_name] = r
+        return r
 
     def get_file_logger(self, name: str, encoding: str = "utf-8",
                         formatter=None, max_line_len: int = 3000) -> Logger:

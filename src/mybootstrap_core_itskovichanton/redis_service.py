@@ -48,12 +48,12 @@ class RedisService:
             def _make_key(key: str) -> str:
                 return f"{key_prefix}:{key}"
 
-            def get(self, key: str) -> value_class | None:
+            def get(self, key: str, vc=None) -> value_class | None:
                 value_bytes = self.rds.hget(hname, self._make_key(key))
                 if value_bytes is None:
                     return None
                 value_dict = pickle.loads(value_bytes)
-                return deserializer(value_class, value_dict)
+                return deserializer(vc or value_class, value_dict)
 
             def set(self, key: str, value: value_class, ttl=None):
                 value = pre_serializer(value)
