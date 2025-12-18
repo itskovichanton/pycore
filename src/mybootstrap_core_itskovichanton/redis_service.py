@@ -1,4 +1,5 @@
 import pickle
+import socket
 from dataclasses import dataclass, asdict
 from typing import TypeVar, Generic, Dict, Callable, Any
 
@@ -7,6 +8,7 @@ from paprika import singleton
 from redis.client import Redis
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
+from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException
 
 
 @dataclass
@@ -24,6 +26,13 @@ def default_deserializer(value_class, value_dict):
 @bean(config=("redis", RedisConfig, RedisConfig()))
 class RedisService:
     config_service: ConfigService
+
+    def check_availability(self, timeout: float = 1.0):
+        with socket.create_connection((self.config.host, self.config.port), timeout=timeout) as conn:
+            conn.sendall(b"*1\r\n$4\r\nPING\r\n")
+            reply = conn.recv(1024)
+            if b"PONG" not in reply:
+                raise CoreException(message=f"redis responded on PING: {str(reply)}")
 
     @singleton
     def get(self) -> Redis:

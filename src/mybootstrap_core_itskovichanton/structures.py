@@ -72,9 +72,16 @@ class CaseInsensitiveDict(MutableMapping):
         # Compare insensitively
         return dict(self.lower_items()) == dict(other.lower_items())
 
+    def __hash__(self):
+        items = tuple(sorted(self.lower_items()))
+        return hash(items)
+
     # Copy is required
     def copy(self):
         return CaseInsensitiveDict(self._store.values())
 
     def __repr__(self):
         return str(dict(self.items()))
+
+    def to_dict(self) -> dict:
+        return {v[0]: v[1] for k, v in self._store.items()}

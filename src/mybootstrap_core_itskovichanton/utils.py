@@ -26,7 +26,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from enum import Enum, EnumType
 from inspect import isclass
-from typing import Any, Callable, List, Set, Tuple, TypeVar, Dict
+from typing import Any, Callable, List, Set, Tuple, TypeVar, Dict, Iterable
 from urllib.error import URLError
 from urllib.parse import urlparse, urlencode, urlunparse
 
@@ -604,11 +604,13 @@ def catch(_func=None, *, exception=None, handler=None, silent=False):
         return decorator_catch(_func)
 
 
+singleton_cache = {}
+cache_timestamps = {}
+
+
 @omittable_parentheses()
 def singleton(ttl=None):
     def decorator(func):
-        singleton_cache = {}
-        cache_timestamps = {}
 
         def calc_hash(k):
             try:
@@ -622,11 +624,11 @@ def singleton(ttl=None):
             key = args
             if kwargs:
                 key += (frozenset(kwargs.items()),)
-            key = tuple(calc_hash(k) for k in key)
+            key = tuple(calc_hash(k) for k in key + (get_method_name(func),))
 
             # Проверка времени жизни кеша
             if key in cache_timestamps:
-                if ttl is not None and (time.time() - cache_timestamps[key]) > ttl:
+                if ttl > 0 and ttl is not None and (time.time() - cache_timestamps[key]) > ttl:
                     del singleton_cache[key]
                     del cache_timestamps[key]
 
@@ -640,6 +642,16 @@ def singleton(ttl=None):
         return wrapper
 
     return decorator
+
+
+class SingletonCache:
+    def __init__(self):
+        self._lazy_singletons = {}
+
+    def get_singleton_decorator(self, ttl):
+        if ttl not in self._lazy_singletons:
+            self._lazy_singletons[ttl] = singleton(ttl=ttl)
+        return self._lazy_singletons[ttl]
 
 
 def scheduled(everyday_time):
@@ -922,3 +934,22 @@ def remove_last_path_fragments(url: str, n: int = 1) -> str:
         parsed.query,
         parsed.fragment
     ))
+
+
+def map_if_type_or_collection(value, t, mapper):
+    # Если одиночный объект типа T → вернуть список с одним преобразованным элементом
+    if isinstance(value, t):
+        return mapper(value)
+
+    # Если это коллекция — пройтись по элементам
+    if isinstance(value, (list, tuple, set)):
+        result = []
+        for item in value:
+            if isinstance(item, t):
+                result.append(mapper(item))
+            else:
+                result.append(item)
+        return result
+
+    # Всё остальное — в список как есть
+    return value
