@@ -22,7 +22,7 @@ class StatsSummary:
     total: float
     p95: float
     p99: float
-    top: List[Point]
+    most_long_requests: List[Point]
 
 
 class StatsWindow:
@@ -46,7 +46,7 @@ class StatsWindow:
         if not self.items:
             return StatsSummary(
                 avg=0, max=0, min=0, median=0, stddev=0,
-                count=0, total=0, p95=0, p99=0, top=[]
+                count=0, total=0, p95=0, p99=0, most_long_requests=[]
             )
 
         durations = [x.duration for x in self.items]
@@ -61,7 +61,7 @@ class StatsWindow:
         p95_v = self._percentile(sorted_d, 95)
         p99_v = self._percentile(sorted_d, 99)
 
-        top_items = sorted(self.items, key=lambda x: x.duration, reverse=True)[:top_n]
+        most_long_requests = sorted(self.items, key=lambda x: x.duration, reverse=True)[:top_n]
 
         return StatsSummary(
             avg=avg_v,
@@ -73,5 +73,5 @@ class StatsWindow:
             total=total_v,
             p95=p95_v,
             p99=p99_v,
-            top=top_items
+            most_long_requests=most_long_requests
         )

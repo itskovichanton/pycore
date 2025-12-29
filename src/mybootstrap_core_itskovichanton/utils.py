@@ -888,9 +888,6 @@ def check_url_availability_by_url(url: str, timeout: int = 3, by_http_request=Fa
     host = parsed.hostname
     port = parsed.port
 
-    # if host is None or port is None:
-    #     return UrlCheckResult(error="Некорректный URL, должен быть вида схема://хост:порт", host=host, port=port)
-
     if by_http_request:
         return check_url_availability_by_url_with_http_request(url, timeout)
 
@@ -953,3 +950,20 @@ def map_if_type_or_collection(value, t, mapper):
 
     # Всё остальное — в список как есть
     return value
+
+
+def threaded_async(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        def runner():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            coro = func(*args, **kwargs)
+            loop.run_until_complete(coro)
+            loop.run_forever()
+
+        thread = threading.Thread(target=runner, daemon=True)
+        thread.start()
+        return thread
+
+    return wrapper
