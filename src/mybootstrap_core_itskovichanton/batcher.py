@@ -53,7 +53,7 @@ class AsyncUniqueKeyBuffer:
             if len(self.buffer) >= self.max_buffer:
                 return
             self.buffer[key] = obj
-
+            print(len(self.buffer))
             if len(self.buffer) >= self.batch_size:
                 await self._emit()
 
@@ -65,12 +65,13 @@ class AsyncUniqueKeyBuffer:
         await self.queue.put(batch)
 
     async def _flush_loop(self):
-        while not self.stop_event.is_set():
-            sleep(self.flush_interval)
+        while True:
+            await asyncio.sleep(self.flush_interval)
             async with self.lock:
                 await self._emit()
 
     async def _worker(self, wid):
+
         backoff = self.backoff_min
 
         while not self.stop_event.is_set():
@@ -78,19 +79,21 @@ class AsyncUniqueKeyBuffer:
 
             while True:
                 try:
+
                     await self.transport.send(batch)
                     backoff = self.backoff_min
+
                     break
 
                 except TransportSlowDown as e:
-                    sleep(e.delay)
+                    await asyncio.sleep(e.delay)
 
                 except TransportRetry:
-                    sleep(backoff)
+                    await asyncio.sleep(backoff)
                     backoff = min(backoff * 2, self.backoff_max)
 
                 except TransportError:
-                    sleep(backoff)
+                    await asyncio.sleep(backoff)
                     backoff = min(backoff * 2, self.backoff_max)
 
             self.queue.task_done()
@@ -99,6 +102,7 @@ class AsyncUniqueKeyBuffer:
         self.tasks.append(asyncio.create_task(self._flush_loop()))
         for i in range(self.workers):
             self.tasks.append(asyncio.create_task(self._worker(i)))
+        await asyncio.gather(*self.tasks)
 
     async def close(self):
         self.stop_event.set()
