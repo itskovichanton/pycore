@@ -628,7 +628,7 @@ def singleton(ttl=None):
 
             # Проверка времени жизни кеша
             if key in cache_timestamps:
-                if ttl > 0 and ttl is not None and (time.time() - cache_timestamps[key]) > ttl:
+                if (ttl is not None) and (0 < ttl < (time.time() - cache_timestamps[key])):
                     del singleton_cache[key]
                     del cache_timestamps[key]
 
