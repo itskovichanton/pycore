@@ -1,16 +1,16 @@
-import pickle
-
-import pika
 import json
-import time
 import logging
-import threading
-from typing import Generator, Optional, Dict, Any, Callable
-from queue import Queue
-from dataclasses import dataclass
-from enum import Enum
+import pickle
 import signal
 import sys
+import threading
+import time
+from dataclasses import dataclass
+from enum import Enum
+from queue import Queue
+from typing import Generator
+
+import pika
 
 # Настройка логирования
 logging.basicConfig(

@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import Protocol
 
 import requests
-from paprika import threaded
 # from pygelf import GelfUdpHandler
 from pythonjsonlogger import jsonlogger
 from requests import Session
@@ -28,7 +27,7 @@ from src.mybootstrap_ioc_itskovichanton.ioc import bean
 from src.mybootstrap_core_itskovichanton import alerts
 from src.mybootstrap_core_itskovichanton.alerts import Alert
 from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, unescape_str, singleton, generate_uid, \
-    UrlCheckResult, check_url_availability_with_socket, check_url_availability_by_url
+    UrlCheckResult, check_url_availability_by_url
 
 
 @dataclass

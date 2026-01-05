@@ -1,6 +1,4 @@
 import asyncio
-import json
-from time import sleep
 
 
 class TransportError(Exception):

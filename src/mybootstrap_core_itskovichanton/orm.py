@@ -1,7 +1,7 @@
 import inspect
 import typing
 from dataclasses import dataclass
-from typing import Type, List, Set, Any, Tuple
+from typing import Type, List, Set, Any
 
 from peewee import *
 from peewee import ModelSelect

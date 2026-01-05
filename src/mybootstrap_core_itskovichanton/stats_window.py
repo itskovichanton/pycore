@@ -1,8 +1,8 @@
-from dataclasses import dataclass
+import math
 from collections import deque
+from dataclasses import dataclass
 from statistics import mean, median, pstdev
 from typing import List
-import math
 
 
 @dataclass

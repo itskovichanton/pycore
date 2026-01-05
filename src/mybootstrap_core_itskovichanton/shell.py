@@ -1,12 +1,12 @@
 import subprocess
+from typing import Protocol
 
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
+from src.mybootstrap_ioc_itskovichanton.ioc import bean
+from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException
 
 from src.mybootstrap_core_itskovichanton.logger import log
 from src.mybootstrap_core_itskovichanton.utils import is_windows
-from src.mybootstrap_ioc_itskovichanton.ioc import bean
-from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException
-from typing import Protocol
 
 
 class ShellService(Protocol):

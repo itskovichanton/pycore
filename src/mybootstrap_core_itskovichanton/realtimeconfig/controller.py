@@ -1,9 +1,10 @@
 from typing import Any
 
-from src.mybootstrap_core_itskovichanton.realtime_config import RealTimeConfigManager
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 from src.mybootstrap_mvc_itskovichanton.pipeline import Action, ActionRunner
 from src.mybootstrap_pyauth_itskovichanton.frontend.controller import GetUserAction
+
+from src.mybootstrap_core_itskovichanton.realtime_config import RealTimeConfigManager
 
 
 @bean

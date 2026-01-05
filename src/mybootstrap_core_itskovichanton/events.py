@@ -1,9 +1,9 @@
 from typing import Protocol
 
 from event_bus import EventBus
+from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
 from src.mybootstrap_core_itskovichanton.di import injector
-from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
 
 class Events(Protocol):

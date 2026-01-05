@@ -4,8 +4,6 @@ from dataclasses import dataclass
 from typing import Protocol, Callable, Any
 
 from retrying import retry
-
-from src.mybootstrap_core_itskovichanton.utils import is_network_connection_failed
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 from src.mybootstrap_ioc_itskovichanton.utils import default_dataclass_field, omittable_parentheses
@@ -14,6 +12,7 @@ from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException, \
 
 from src.mybootstrap_core_itskovichanton.email import EmailService, Params
 from src.mybootstrap_core_itskovichanton.fr import FRService, Post
+from src.mybootstrap_core_itskovichanton.utils import is_network_connection_failed
 
 
 @dataclass
@@ -41,6 +40,9 @@ class AlertService(Protocol):
     def handle(self, e: BaseException, alert: Alert = Alert()):
         """Send alert about exception"""
 
+    def register_handler(self, action):
+        ...
+
 
 alert_service: AlertService
 
@@ -51,9 +53,13 @@ class AlertServiceImpl(AlertService):
     fr_service: FRService
     email_service: EmailService
     _interceptors: list[ExceptionInterceptor] = default_dataclass_field([])
+    handlers: list[callable] = default_dataclass_field([])
 
     def get_interceptors(self) -> list[ExceptionInterceptor]:
         return self._interceptors
+
+    def register_handler(self, action):
+        self.handlers.append(action)
 
     def send(self, a: Alert):
         if not a.send:
@@ -63,19 +69,22 @@ class AlertServiceImpl(AlertService):
             a.subject = "NO TOPIC"
 
         a.subject = f"{self.config_service.app_name()} - [{a.subject}]"
+        for handler in self.handlers:
+            handler(a)
 
-        if a.byFR:
-            self.send_by_fr(a)
-
-        if a.byEmail:
-            self.send_by_email(a)
+        # if a.byFR:
+        #     self.send_by_fr(a)
+        #
+        # if a.byEmail:
+        #     self.send_by_email(a)
 
     def send_by_fr(self, a):
         self.fr_service.send(Post(project=a.subject, level=a.level, msg=a.message))
 
     def send_by_email(self, a):
         self.email_service.send(
-            Params(subject=a.subject, toEmail=a.emails or self.emails, senderEmail=self.from_email, content_plain=a.message))
+            Params(subject=a.subject, toEmail=a.emails or self.emails, senderEmail=self.from_email,
+                   content_plain=a.message))
 
     def handle(self, e: BaseException, alert: Alert = Alert()):
         if not alert:
@@ -109,7 +118,7 @@ def alert_on_fail(alert: Alert | Callable[[Exception], Alert] = Alert(),
         def inner(*args, **kwargs):
             try:
                 return func(*args, **kwargs)
-            except Exception as e:
+            except BaseException as e:
                 _alert = alert
                 if callable(_alert):
                     _alert = _alert(e)

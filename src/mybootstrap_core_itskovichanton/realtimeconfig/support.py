@@ -1,11 +1,8 @@
-import datetime
-
 from fastapi import FastAPI
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 from src.mybootstrap_ioc_itskovichanton.utils import default_dataclass_field
 from src.mybootstrap_mvc_fastapi_itskovichanton.presenters import JSONResultPresenterImpl
 from src.mybootstrap_mvc_itskovichanton.result_presenter import ResultPresenter
-from src.mybootstrap_pyauth_itskovichanton.frontend.utils import get_caller_from_request
 from starlette.requests import Request
 
 from src.mybootstrap_core_itskovichanton.realtimeconfig.controller import EtcdController

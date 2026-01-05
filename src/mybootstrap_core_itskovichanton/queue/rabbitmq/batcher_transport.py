@@ -1,14 +1,9 @@
+import json
 import pickle
 
 import aio_pika
-import asyncio
-import json
-import random
 
-import pika
-
-from src.mybootstrap_core_itskovichanton.batcher import AbstractTransport, TransportRetry, TransportSlowDown, \
-    TransportError
+from src.mybootstrap_core_itskovichanton.batcher import AbstractTransport
 
 
 def marshal_json(a):

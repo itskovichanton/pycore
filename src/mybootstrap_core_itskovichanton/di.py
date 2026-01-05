@@ -2,7 +2,7 @@ from opyoid import Injector
 from paprika import singleton
 from src.mybootstrap_ioc_itskovichanton import di
 
-from src.mybootstrap_core_itskovichanton import alerts, logger, tracer
+from src.mybootstrap_core_itskovichanton import alerts, logger
 from src.mybootstrap_core_itskovichanton.alerts import AlertService
 from src.mybootstrap_core_itskovichanton.logger import LoggerService
 

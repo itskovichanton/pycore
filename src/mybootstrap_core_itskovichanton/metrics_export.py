@@ -1,16 +1,13 @@
+import time
 from dataclasses import dataclass
 from typing import Protocol
 
+from prometheus_client import Gauge
 from prometheus_client import start_http_server
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
-import time
-from prometheus_client import Gauge
-from src.mybootstrap_ioc_itskovichanton.config import ConfigService
-
 from src.mybootstrap_core_itskovichanton.di import injector
-
 from src.mybootstrap_core_itskovichanton.utils import singleton, get_systemd_service_for_pid
 
 
