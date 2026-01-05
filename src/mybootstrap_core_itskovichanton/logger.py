@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Protocol
 
 import requests
-# from pygelf import GelfUdpHandler
+
 from pythonjsonlogger import jsonlogger
 from requests import Session
 from src.mybootstrap_ioc_itskovichanton import ioc
@@ -27,7 +27,7 @@ from src.mybootstrap_ioc_itskovichanton.ioc import bean
 from src.mybootstrap_core_itskovichanton import alerts
 from src.mybootstrap_core_itskovichanton.alerts import Alert
 from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, unescape_str, singleton, generate_uid, \
-    UrlCheckResult, check_url_availability_by_url
+    UrlCheckResult, check_url_availability_with_socket, check_url_availability_by_url
 
 
 @dataclass
@@ -170,16 +170,24 @@ class TimedCompressedRotatingFileHandler(logging.handlers.TimedRotatingFileHandl
         os.remove(dfn)
 
 
-def _adapt_body(body):
+def _adapt_body(body, content_type):
     if body is None:
         return None
 
-    if isinstance(body, bytes):
+    readable = False
+    if content_type:
+        for x in ("text", "xml", "json"):
+            if x in content_type:
+                readable = True
+                break
+
+    if not readable and isinstance(body, bytes):
         return f"binary[{len(body)}]"
 
     text = str(body)
-    if len(text) > 1000:
-        return text[:1000] + "...(truncated)"
+    tl = len(text)
+    if tl > 1000:
+        return text[:1000] + f"...(truncated, total={tl})"
     return text
 
 
@@ -263,14 +271,15 @@ class SessionWithStats(requests.Session):
                     "method": method,
                     "url": url,
                     "headers": dict(req_headers) if req_headers else None,
-                    "body": _adapt_body(req_body),
+                    "body": _adapt_body(req_body, req_headers.get("content-type") if req_headers else None),
                 },
                 "res": {
-                    "code": response.status_code if response else None,
-                    "reason": response.reason if response else None,
-                    "url": response.url if response else None,
-                    "headers": dict(response.headers) if response else None,
-                    "body": _adapt_body(response.content if response else None),
+                    "code": response.status_code,
+                    "reason": response.reason,
+                    "url": response.url,
+                    "headers": dict(response.headers) if response.headers else None,
+                    "body": _adapt_body(response.content,
+                                        response.headers.get("content-type") if response.headers else None),
                 },
                 "err": str(exc) if exc else None,
                 "elapsed": elapsed,
