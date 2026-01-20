@@ -1,9 +1,13 @@
 import logging
+import sys
+import threading
 import traceback
 from dataclasses import dataclass
 from typing import Protocol, Callable, Any
 
 from retrying import retry
+
+from src.mybootstrap_core_itskovichanton.utils import is_network_connection_failed
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 from src.mybootstrap_ioc_itskovichanton.utils import default_dataclass_field, omittable_parentheses
@@ -12,7 +16,6 @@ from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException, \
 
 from src.mybootstrap_core_itskovichanton.email import EmailService, Params
 from src.mybootstrap_core_itskovichanton.fr import FRService, Post
-from src.mybootstrap_core_itskovichanton.utils import is_network_connection_failed
 
 
 @dataclass
@@ -54,6 +57,20 @@ class AlertServiceImpl(AlertService):
     email_service: EmailService
     _interceptors: list[ExceptionInterceptor] = default_dataclass_field([])
     handlers: list[callable] = default_dataclass_field([])
+
+    def init(self, **kwargs):
+        sys.excepthook = self._handle_uncaught_from_main_thread
+        threading.excepthook = self._handle_uncaught_from_async_threads
+
+    def _handle_uncaught_from_async_threads(self, args):
+        self.handle(CoreException(
+            message=f"Exception from thread {args.thread.name}\n" +
+                    ''.join(traceback.format_exception(args.exc_type, args.exc_value, args.exc_traceback))),
+        )
+
+    def _handle_uncaught_from_main_thread(self, type, value, tb):
+        self.handle(CoreException(
+            message="Exception from main thread\n" + ''.join(traceback.format_exception(type, value, tb))))
 
     def get_interceptors(self) -> list[ExceptionInterceptor]:
         return self._interceptors

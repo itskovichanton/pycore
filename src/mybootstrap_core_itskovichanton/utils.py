@@ -25,7 +25,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from enum import Enum, EnumType
 from inspect import isclass
-from typing import Any, Callable, List, Set, Tuple, TypeVar, Dict
+from typing import Any, Callable, List, Set, Tuple, TypeVar, Dict, Optional
 from urllib.error import URLError
 from urllib.parse import urlparse, urlencode, urlunparse
 
@@ -36,7 +36,7 @@ from benedict import benedict
 from dacite import from_dict
 from dataclasses_json import LetterCase, dataclass_json
 from dateutil.relativedelta import relativedelta
-from xsdata.models.datatype import XmlDate, XmlDateTime
+from xsdata.models.datatype import XmlDate, XmlDateTime, XmlTime
 
 from src.mybootstrap_core_itskovichanton.structures import CaseInsensitiveDict
 
@@ -269,7 +269,8 @@ def encode_json_value(_, obj):
 
 def is_standard_value_object(obj):
     return isinstance(obj,
-                      (Enum, str, int, float, date, datetime, Decimal, timedelta, XmlDate, XmlDateTime)) or isclass(obj)
+                      (Enum, str, int, float, date, datetime, Decimal, timedelta, XmlDate, XmlTime,
+                       XmlDateTime)) or isclass(obj)
 
 
 def to_dict_deep(obj, route=(),
@@ -606,15 +607,31 @@ singleton_cache = {}
 cache_timestamps = {}
 
 
+def clear_singleton_cache(key_prefix):
+    clear_dict_with_key_prefix(singleton_cache, key_prefix)
+
+
+def calc_hash(k):
+    try:
+        return hash(k)
+    except:
+        return str(id(k))
+
+
+def clear_dict_with_key_prefix(d: dict, key_prefix=None):
+    if not key_prefix:
+        d.clear()
+        return
+
+    key_prefix_hash = calc_hash(key_prefix)
+    keys_to_remove = [k for k in d if k[0] == key_prefix_hash]
+    for k in keys_to_remove:
+        del d[k]
+
+
 @omittable_parentheses()
 def singleton(ttl=None):
     def decorator(func):
-
-        def calc_hash(k):
-            try:
-                return hash(k)
-            except:
-                return str(id(k))
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -965,3 +982,117 @@ def threaded_async(func):
         return thread
 
     return wrapper
+
+
+def to_sync(
+        *,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
+        wait: bool = False,
+        timeout: Optional[float] = None,
+        return_future: bool = False,
+        detect_loop_from_self: bool = True  # Новая опция!
+):
+    """
+    Универсальный декоратор для преобразования async функции в sync.
+
+    Параметры:
+        loop: конкретный event loop для запуска
+        wait: ждать ли завершения (True) или вернуть Future (False)
+        timeout: таймаут ожидания
+        return_future: всегда возвращать Future, даже если есть работающий loop
+        detect_loop_from_self: автоматически искать _event_loop в self (первом аргументе)
+    """
+
+    def decorator(async_func: Callable) -> Callable:
+        @functools.wraps(async_func)
+        def sync_wrapper(*args, **kwargs) -> Any:
+            # Определяем target loop
+            target_loop = loop
+
+            # Автоматическое определение loop из self объекта
+            if detect_loop_from_self and target_loop is None and args:
+                # Пытаемся найти self (первый аргумент может быть self для метода)
+                potential_self = args[0]
+
+                # Проверяем, что это объект, а не класс
+                if hasattr(potential_self, '__class__'):
+                    # Ищем event loop в разных возможных атрибутах
+                    for attr_name in ['_event_loop', 'event_loop', 'loop', '_loop']:
+                        if hasattr(potential_self, attr_name):
+                            attr_value = getattr(potential_self, attr_name)
+                            if isinstance(attr_value, asyncio.AbstractEventLoop):
+                                target_loop = attr_value
+                                break
+
+            # Определяем контекст
+            try:
+                current_loop = asyncio.get_running_loop()
+                in_async_context = True
+            except RuntimeError:
+                current_loop = None
+                in_async_context = False
+
+            # Выбор стратегии
+            if in_async_context and not return_future:
+                if wait:
+                    if timeout:
+                        return asyncio.wait_for(
+                            async_func(*args, **kwargs),
+                            timeout=timeout
+                        )
+                    # Для wait=True в async контексте нужен await
+                    # Но мы в sync-обертке, поэтому запускаем синхронно
+                    task = current_loop.create_task(async_func(*args, **kwargs))
+                    if timeout:
+                        return asyncio.wait_for(task, timeout=timeout)
+                    return asyncio.run_coroutine_threadsafe(
+                        async_func(*args, **kwargs),
+                        current_loop
+                    ).result()
+                else:
+                    task = current_loop.create_task(async_func(*args, **kwargs))
+                    if timeout:
+                        return asyncio.wait_for(task, timeout=timeout)
+                    return task
+
+            elif target_loop is not None:
+                future = asyncio.run_coroutine_threadsafe(
+                    async_func(*args, **kwargs),
+                    target_loop
+                )
+                if wait:
+                    return future.result(timeout=timeout)
+                return future
+
+            else:
+                if timeout:
+                    return asyncio.run(asyncio.wait_for(
+                        async_func(*args, **kwargs),
+                        timeout=timeout
+                    ))
+                return asyncio.run(async_func(*args, **kwargs))
+
+        return sync_wrapper
+
+    return decorator
+
+
+def is_caused_by(e: BaseException, target: BaseException | type) -> bool:
+    """Проверяет, было ли исключение e вызвано target,
+    либо объектом target, либо потомками класса target."""
+
+    # Если передан объект — определяем его класс
+    target_type = target if isinstance(target, type) else type(target)
+
+    current = e
+    while current is not None:
+        # Проверка: это сам объект или экземпляр потомка
+        if current is target or isinstance(current, target_type):
+            return True
+        current = current.__cause__ or current.__context__
+
+    return False
+
+
+def get_url_path(url):
+    return url.split("?")[0]

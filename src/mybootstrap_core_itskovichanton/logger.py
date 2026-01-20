@@ -186,8 +186,8 @@ def _adapt_body(body, content_type):
 
     text = str(body)
     tl = len(text)
-    if tl > 1000:
-        return text[:1000] + f"...(truncated, total={tl})"
+    if tl > 10000:
+        return text[:10000] + f"...(truncated, total={tl})"
     return text
 
 
@@ -274,12 +274,13 @@ class SessionWithStats(requests.Session):
                     "body": _adapt_body(req_body, req_headers.get("content-type") if req_headers else None),
                 },
                 "res": {
-                    "code": response.status_code,
-                    "reason": response.reason,
-                    "url": response.url,
-                    "headers": dict(response.headers) if response.headers else None,
-                    "body": _adapt_body(response.content,
-                                        response.headers.get("content-type") if response.headers else None),
+                    "code": response.status_code if response else None,
+                    "reason": response.reason if response else None,
+                    "url": response.url if response else None,
+                    "headers": dict(response.headers) if response and response.headers else None,
+                    "body": _adapt_body(response.content if response else None,
+                                        response.headers.get("content-type")
+                                        if response and response.headers else None),
                 },
                 "err": str(exc) if exc else None,
                 "elapsed": elapsed,

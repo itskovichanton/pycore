@@ -362,7 +362,7 @@ class RabbitMQConsumer:
             # Автоматически подтверждаем получение
             channel.basic_ack(delivery_tag=method.delivery_tag)
 
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, ModuleNotFoundError):
             logger.error(f"Failed to decode JSON message: {body[:100]}")
             channel.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
         except Exception as e:
