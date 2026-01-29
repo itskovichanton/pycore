@@ -62,7 +62,7 @@ class RedisService:
                 if value_bytes is None:
                     return None
                 value_dict = pickle.loads(value_bytes)
-                return deserializer(vc or value_class, value_dict)
+                return deserializer(vc or value_class, value_dict) if deserializer else value_dict
 
             def set(self, key: str, value: value_class, ttl=None):
                 value = pre_serializer(value)
@@ -99,9 +99,10 @@ class RedisService:
                     value_dict = pickle.loads(value_bytes)
                     original_key = key_str[len(self.key_prefix) + 1:]
                     value_deserialized = deserializer(value_class, value_dict)
-                    if finder:
-                        if finder(original_key, value_deserialized):
-                            return original_key, value_deserialized
+                    if not filter:
+                        filter = lambda k, v: True
+                    if finder(original_key, value_deserialized):
+                        return original_key, value_deserialized
 
             def get_all(self, filter: Callable[[str, value_class], bool] = None) -> Dict[str, value_class]:
                 keys = self.rds.hkeys(hname)
@@ -112,9 +113,10 @@ class RedisService:
                     value_dict = pickle.loads(value_bytes)
                     original_key = key_str[len(self.key_prefix) + 1:]
                     value_deserialized = deserializer(value_class, value_dict)
-                    if filter:
-                        if filter(original_key, value_deserialized):
-                            result[original_key] = value_deserialized
+                    if not filter:
+                        filter = lambda k, v: True
+                    if filter(original_key, value_deserialized):
+                        result[original_key] = value_deserialized
 
                 return result
 

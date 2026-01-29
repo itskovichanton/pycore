@@ -18,6 +18,7 @@ import time
 import traceback
 import urllib
 import uuid
+import zlib
 from collections import abc
 from collections.abc import MutableMapping
 from concurrent.futures import ThreadPoolExecutor
@@ -1096,3 +1097,8 @@ def is_caused_by(e: BaseException, target: BaseException | type) -> bool:
 
 def get_url_path(url):
     return url.split("?")[0]
+
+
+def compress_str(s: str):
+    compressed = zlib.compress(s.encode('utf-8'), level=9)
+    return base64.urlsafe_b64encode(compressed).decode('ascii')
