@@ -1102,3 +1102,14 @@ def get_url_path(url):
 def compress_str(s: str):
     compressed = zlib.compress(s.encode('utf-8'), level=9)
     return base64.urlsafe_b64encode(compressed).decode('ascii')
+
+
+def with_empty_method(cls):
+    def empty(self):
+        for f in dataclasses.fields(self):
+            if getattr(self, f.name):
+                return False
+        return True
+
+    setattr(cls, "empty", empty)
+    return cls

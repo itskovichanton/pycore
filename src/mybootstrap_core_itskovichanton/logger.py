@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Protocol
 
 import requests
+from django.utils.itercompat import is_iterable
 
 from pythonjsonlogger import jsonlogger
 from requests import Session
@@ -35,6 +36,10 @@ class RequestStats:
     times: deque = field(default_factory=lambda: deque(maxlen=200))
     connection_success_count: int = 0
     connection_fail_count: int = 0
+    err_response_count: int = 0
+    connection_problem_actual: bool = False
+    err_response_problem_actual: bool = False
+    last_err_response: str = None
     response_statuses: dict[str, int] = field(default_factory=lambda: defaultdict(int))
     last_err: str = None
 
@@ -48,6 +53,10 @@ class RequestStats:
 
     def summary(self):
         return {
+            "connection_problem_actual": self.connection_problem_actual,
+            "err_response_problem_actual": self.err_response_problem_actual,
+            "last_err_response": self.last_err_response,
+            "err_response_count": self.err_response_count,
             "connection_success_count": self.connection_success_count,
             "connection_fail_count": self.connection_fail_count,
             "response_statuses": self.response_statuses,
@@ -68,7 +77,8 @@ class LoggerService(Protocol):
     def get_graylog_logger(self, name: str) -> Logger:
         ...
 
-    def get_logged_session(self, logger_name="outgoing-requests", url=None, route=None) -> Session:
+    def get_logged_session(self, logger_name="outgoing-requests", url=None, route=None,
+                           error_words_detectors=None) -> Session:
         ...
 
     def get_file_logger(self, name: str, encoding: str = "utf-8",
@@ -204,11 +214,14 @@ def _check_url_availability(url):
 
 class SessionWithStats(requests.Session):
 
-    def __init__(self, name, logger=None, url=None, route=None):
+    def __init__(self, name, logger=None, url=None, route=None, error_words_detectors=None):
         super().__init__()
         self.name = name
         self._stats = defaultdict(RequestStats)
         self._lock = threading.Lock()
+        if error_words_detectors and not is_iterable(error_words_detectors):
+            error_words_detectors = [error_words_detectors]
+        self._error_words_detectors = error_words_detectors
         self._logger = logger or logging.getLogger(name)
         self._url = url
         self._route = route
@@ -253,13 +266,26 @@ class SessionWithStats(requests.Session):
             else:
                 route = url.split("?")[0]
 
+            resp_body = _adapt_body(response.content if response else None,
+                                    response.headers.get("content-type")
+                                    if response and response.headers else None)
+
             # Обновляем статистику
             with self._lock:
                 st = self._stats[route]
                 st.times.append(elapsed)
                 if exc is None:
+                    # содеинение успешно, разбираем ответ
+                    st.connection_problem_actual = False
                     st.connection_success_count += 1
+                    if self._error_words_detectors:
+                        st.err_response_problem_actual = any(w in resp_body for w in self._error_words_detectors or [])
+                        if st.err_response_problem_actual:
+                            st.err_response_count += 1
+                            st.last_err_response = str(resp_body)
                 else:
+                    # содеинение упало
+                    st.connection_problem_actual = True
                     st.connection_fail_count += 1
                     st.last_err = str(exc)
                 if response:
@@ -278,9 +304,7 @@ class SessionWithStats(requests.Session):
                     "reason": response.reason if response else None,
                     "url": response.url if response else None,
                     "headers": dict(response.headers) if response and response.headers else None,
-                    "body": _adapt_body(response.content if response else None,
-                                        response.headers.get("content-type")
-                                        if response and response.headers else None),
+                    "body": resp_body,
                 },
                 "err": str(exc) if exc else None,
                 "elapsed": elapsed,
@@ -339,9 +363,11 @@ class LoggerServiceImpl(LoggerService):
         return r
 
     @singleton
-    def get_logged_session(self, logger_name="outgoing-requests", url=None, route=None) -> Session:
+    def get_logged_session(self, logger_name="outgoing-requests", url=None, route=None,
+                           error_words_detectors=None) -> Session:
         logger = self.get_file_logger(logger_name)
-        r = SessionWithStats(f"{self.config_service.app_name()}:{logger_name}", logger, url, route)
+        r = SessionWithStats(f"{self.config_service.app_name()}:{logger_name}", logger, url, route,
+                             error_words_detectors)
         self._sessions[logger_name] = r
         return r
 

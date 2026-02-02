@@ -7,26 +7,21 @@ from typing import Protocol, Callable, Any
 
 from retrying import retry
 
-from src.mybootstrap_core_itskovichanton.utils import is_network_connection_failed
+from src.mybootstrap_core_itskovichanton.utils import is_network_connection_failed, with_empty_method
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 from src.mybootstrap_ioc_itskovichanton.utils import default_dataclass_field, omittable_parentheses
 from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException, \
     ERR_REASON_SERVER_RESPONDED_WITH_ERROR_NOT_FOUND
 
-from src.mybootstrap_core_itskovichanton.email import EmailService, Params
-from src.mybootstrap_core_itskovichanton.fr import FRService, Post
 
-
+@with_empty_method
 @dataclass
 class Alert:
     message: Any = None
     subject: str = None
-    byEmail: bool = True
-    byFR: bool = True
     level: int = 1
     send: bool = True
-    emails: str = None
 
 
 ExceptionInterceptor = Callable[[BaseException], BaseException]
@@ -50,11 +45,9 @@ class AlertService(Protocol):
 alert_service: AlertService
 
 
-@bean(emails="alerts.emails", from_email="email.from")
+@bean
 class AlertServiceImpl(AlertService):
     config_service: ConfigService
-    fr_service: FRService
-    email_service: EmailService
     _interceptors: list[ExceptionInterceptor] = default_dataclass_field([])
     handlers: list[callable] = default_dataclass_field([])
 
@@ -79,7 +72,7 @@ class AlertServiceImpl(AlertService):
         self.handlers.append(action)
 
     def send(self, a: Alert):
-        if not a.send:
+        if (not a.send) or a.empty():
             return
 
         if not a.subject:
@@ -89,23 +82,10 @@ class AlertServiceImpl(AlertService):
         for handler in self.handlers:
             handler(a)
 
-        # if a.byFR:
-        #     self.send_by_fr(a)
-        #
-        # if a.byEmail:
-        #     self.send_by_email(a)
-
-    def send_by_fr(self, a):
-        self.fr_service.send(Post(project=a.subject, level=a.level, msg=a.message))
-
-    def send_by_email(self, a):
-        self.email_service.send(
-            Params(subject=a.subject, toEmail=a.emails or self.emails, senderEmail=self.from_email,
-                   content_plain=a.message))
-
     def handle(self, e: BaseException, alert: Alert = Alert()):
         if not alert:
             return
+
         e = self._preprocess(e)
         if not e:
             return
