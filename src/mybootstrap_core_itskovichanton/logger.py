@@ -17,7 +17,6 @@ from pathlib import Path
 from typing import Protocol
 
 import requests
-from django.utils.itercompat import is_iterable
 
 from pythonjsonlogger import jsonlogger
 from requests import Session
@@ -28,7 +27,7 @@ from src.mybootstrap_ioc_itskovichanton.ioc import bean
 from src.mybootstrap_core_itskovichanton import alerts
 from src.mybootstrap_core_itskovichanton.alerts import Alert
 from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, unescape_str, singleton, generate_uid, \
-    UrlCheckResult, check_url_availability_with_socket, check_url_availability_by_url
+    UrlCheckResult, check_url_availability_with_socket, check_url_availability_by_url, is_listable
 
 
 @dataclass
@@ -219,7 +218,7 @@ class SessionWithStats(requests.Session):
         self.name = name
         self._stats = defaultdict(RequestStats)
         self._lock = threading.Lock()
-        if error_words_detectors and not is_iterable(error_words_detectors):
+        if error_words_detectors and not is_listable(error_words_detectors):
             error_words_detectors = [error_words_detectors]
         self._error_words_detectors = error_words_detectors
         self._logger = logger or logging.getLogger(name)
