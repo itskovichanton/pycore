@@ -17,3 +17,4 @@
 !finkarta/work/cmds/
 dist
 tests/CoreTestApp-1.0.0
+__pycache__
