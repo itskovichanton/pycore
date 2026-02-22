@@ -105,13 +105,11 @@ class RedisService:
                         return original_key, value_deserialized
 
             def get_all(self, filter: Callable[[str, value_class], bool] = None) -> Dict[str, value_class]:
-                keys = self.rds.hkeys(hname)
                 result = {}
-                for key in keys:
+                for key, value_bytes in self.rds.hgetall(hname).items():
                     key_str = key.decode('utf-8')
-                    value_bytes = self.rds.hget(hname, key_str)
-                    value_dict = pickle.loads(value_bytes)
                     original_key = key_str[len(self.key_prefix) + 1:]
+                    value_dict = pickle.loads(value_bytes)
                     value_deserialized = deserializer(value_class, value_dict)
                     if not filter:
                         filter = lambda k, v: True

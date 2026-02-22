@@ -7,12 +7,20 @@ import paramiko
 
 
 @dataclass
+class DownloadFileArgs:
+    remote_path: str
+    local_path: str = None
+    success: bool = False
+
+
+@dataclass
 class SSHConfig:
     login: str
     password: str
     host: str
     port: str
     cwd: str = None
+    download_file_args: DownloadFileArgs = None
 
 
 class SSHClient:

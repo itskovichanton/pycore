@@ -6,6 +6,7 @@ import decimal
 import functools
 import hashlib
 import hmac
+import inspect
 import os
 import random
 import re
@@ -634,28 +635,51 @@ def clear_dict_with_key_prefix(d: dict, key_prefix=None):
 def singleton(ttl=None):
     def decorator(func):
 
+        is_async = inspect.iscoroutinefunction(func)
+
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        async def async_wrapper(*args, **kwargs):
             nonlocal ttl
             key = args
+
             if kwargs:
                 key += (frozenset(kwargs.items()),)
+
             key = tuple(calc_hash(k) for k in key + (get_method_name(func),))
 
-            # Проверка времени жизни кеша
             if key in cache_timestamps:
-                if (ttl is not None) and (0 < ttl < (time.time() - cache_timestamps[key])):
+                if ttl is not None and 0 < ttl < (time.time() - cache_timestamps[key]):
                     del singleton_cache[key]
                     del cache_timestamps[key]
 
-            # Если ключ в кеше отсутствует, вычисляем значение и добавляем в кеш
+            if key not in singleton_cache:
+                singleton_cache[key] = await func(*args, **kwargs)
+                cache_timestamps[key] = time.time()
+
+            return singleton_cache[key]
+
+        @functools.wraps(func)
+        def sync_wrapper(*args, **kwargs):
+            nonlocal ttl
+            key = args
+
+            if kwargs:
+                key += (frozenset(kwargs.items()),)
+
+            key = tuple(calc_hash(k) for k in key + (get_method_name(func),))
+
+            if key in cache_timestamps:
+                if ttl is not None and 0 < ttl < (time.time() - cache_timestamps[key]):
+                    del singleton_cache[key]
+                    del cache_timestamps[key]
+
             if key not in singleton_cache:
                 singleton_cache[key] = func(*args, **kwargs)
                 cache_timestamps[key] = time.time()
 
             return singleton_cache[key]
 
-        return wrapper
+        return async_wrapper if is_async else sync_wrapper
 
     return decorator
 
@@ -898,7 +922,7 @@ def check_url_availability_with_socket(host, port, timeout=3) -> UrlCheckResult:
     )
 
 
-def check_url_availability_by_url(url: str, timeout: int = 3, by_http_request=False) -> UrlCheckResult:
+def check_url_availability_by_url(url: str, timeout: int = 3, by_http_request=True) -> UrlCheckResult:
     parsed = urlparse(url)
 
     host = parsed.hostname

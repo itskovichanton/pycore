@@ -92,7 +92,7 @@ class AlertServiceImpl(AlertService):
 
         logging.exception(e)
         alert.message = "\n".join(traceback.format_exception(e))
-        alert.subject = "Exception"
+        alert.subject = (alert.subject or "") + "-Exception"
         self.send(alert)
 
     def _preprocess(self, e: BaseException) -> BaseException:

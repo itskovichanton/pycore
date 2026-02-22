@@ -25,22 +25,23 @@ class StatsSummary:
     most_long_requests: List[Point]
 
 
+def _percentile(sorted_values, p):
+    if not sorted_values:
+        return 0
+    k = (len(sorted_values) - 1) * (p / 100)
+    f = math.floor(k)
+    c = math.ceil(k)
+    if f == c:
+        return sorted_values[int(k)]
+    return sorted_values[f] + (sorted_values[c] - sorted_values[f]) * (k - f)
+
+
 class StatsWindow:
     def __init__(self, max_size=500):
         self.items = deque(maxlen=max_size)
 
     def add(self, p: Point):
         self.items.append(p)
-
-    def _percentile(self, sorted_values, p):
-        if not sorted_values:
-            return 0
-        k = (len(sorted_values) - 1) * (p / 100)
-        f = math.floor(k)
-        c = math.ceil(k)
-        if f == c:
-            return sorted_values[int(k)]
-        return sorted_values[f] + (sorted_values[c] - sorted_values[f]) * (k - f)
 
     def get_summary(self, top_n=5) -> StatsSummary:
         if not self.items:
@@ -58,8 +59,8 @@ class StatsWindow:
         med_v = median(durations)
         std_v = pstdev(durations) if len(durations) > 1 else 0
         total_v = sum(durations)
-        p95_v = self._percentile(sorted_d, 95)
-        p99_v = self._percentile(sorted_d, 99)
+        p95_v = _percentile(sorted_d, 95)
+        p99_v = _percentile(sorted_d, 99)
 
         most_long_requests = sorted(self.items, key=lambda x: x.duration, reverse=True)[:top_n]
 

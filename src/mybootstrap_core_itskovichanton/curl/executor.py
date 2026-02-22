@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from src.mybootstrap_core_itskovichanton.ssh import SSHConfig, DownloadFileArgs
+
 from src.mybootstrap_core_itskovichanton.utils import with_empty_method
 from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException
 
@@ -37,6 +39,7 @@ class Response:
     headers: dict
     body: str
     code: str
+    downloaded_file: DownloadFileArgs = None
 
 
 def _parse_response(output: str) -> Response:
@@ -44,7 +47,7 @@ def _parse_response(output: str) -> Response:
         headers_part = output.split('---RESPONSE-HEADERS---')[1].split('---RESPONSE-BODY---')[0].strip()
         body_part = output.split('---RESPONSE-BODY---')[1].split('---ERROR---')[0].strip()
         error = output.split('---ERROR---')[1].strip()
-        if error:
+        if error and ('cat: /tmp/' not in error):
             raise CoreException(message=error)
 
         lines = headers_part.split('\n')
@@ -76,10 +79,14 @@ def _parse_response(output: str) -> Response:
 class Curl:
     shell: ShellService
 
-    def execute(self, curl_builder: CurlBuilder, cwd=None, ssh_config=None) -> Response:
+    def execute(self, curl_builder: CurlBuilder, cwd=None, ssh_config: SSHConfig = None) -> Response:
         curl_cmd = curl_builder.verbose().store_headers_file('"$headers"').build()
+        if ssh_config and curl_builder.get_output():
+            ssh_config.download_file_args = DownloadFileArgs(remote_path=curl_builder.get_output())
         curl_output = self.shell.execute_bash(_build_curl_cmd(curl_cmd), cwd=cwd, ssh_config=ssh_config)
         r = _parse_response(curl_output)
         if r.empty():
             raise CoreException(message="Пустой результат curl. Возможно нужно выполнять с sudo")
+        if ssh_config:
+            r.downloaded_file = ssh_config.download_file_args
         return r

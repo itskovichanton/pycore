@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 import urllib.parse
 
+from src.mybootstrap_core_itskovichanton.utils import is_listable
+
 
 class HttpMethod(Enum):
     """HTTP методы"""
@@ -611,8 +613,11 @@ class CurlBuilder:
         # Заголовки
         for name, value in self._headers.items():
             # Экранируем значение, если оно содержит кавычки
-            escaped_value = value.replace('"', r'\"')
-            parts.append(f'-H "{name}: {escaped_value}"')
+            if not is_listable(value):
+                value = [value]
+            for v in value:
+                escaped_value = v.replace('"', r'\"')
+                parts.append(f'-H "{name}: {escaped_value}"')
 
         # Куки
         cookies_str = self._build_cookies_string()
@@ -683,7 +688,8 @@ class CurlBuilder:
 
         # Referer
         if self._referer:
-            parts.append(f'-e "{self._referer}"')
+            parts.append(f'-E "{self._referer}"')
+            parts.append(f'--cert-type P12')
 
         # Редиректы
         if self._follow_redirects:
@@ -885,6 +891,9 @@ class CurlBuilder:
             "output_file": self._output,
             "auth_method": "basic" if self._basic_auth else "bearer" if self._bearer_token else "none"
         }
+
+    def get_output(self):
+        return self._output
 
 
 # Примеры использования
