@@ -923,14 +923,12 @@ def check_url_availability_with_socket(host, port, timeout=3) -> UrlCheckResult:
 
 
 def check_url_availability_by_url(url: str, timeout: int = 3) -> UrlCheckResult:
-    parsed = urlparse(url)
-
-    host = parsed.hostname
-    port = parsed.port
-
     if url.startswith("http"):
         return check_url_availability_by_url_with_http_request(url, timeout)
 
+    parsed = urlparse(url)
+    host = parsed.hostname
+    port = parsed.port
     return check_url_availability_with_socket(host, port, timeout)
 
 
