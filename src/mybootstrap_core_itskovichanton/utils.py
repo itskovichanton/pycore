@@ -20,7 +20,7 @@ import traceback
 import urllib
 import uuid
 import zlib
-from collections import abc
+from collections import abc, defaultdict
 from collections.abc import MutableMapping
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
@@ -38,6 +38,7 @@ from benedict import benedict
 from dacite import from_dict
 from dataclasses_json import LetterCase, dataclass_json
 from dateutil.relativedelta import relativedelta
+from requests import Session
 from xsdata.models.datatype import XmlDate, XmlDateTime, XmlTime
 
 from src.mybootstrap_core_itskovichanton.structures import CaseInsensitiveDict
@@ -897,6 +898,7 @@ class UrlCheckResult:
     response_time_ms: float = None
     status: str | None = None
     error: str | None = None
+    method: str = None
 
 
 def check_url_availability_with_socket(host, port, timeout=3) -> UrlCheckResult:
@@ -914,6 +916,7 @@ def check_url_availability_with_socket(host, port, timeout=3) -> UrlCheckResult:
         response_time = round((time.time() - start) * 1000, 2)
 
     return UrlCheckResult(
+        method="socket",
         host=host,
         port=port,
         status=status,
@@ -922,25 +925,74 @@ def check_url_availability_with_socket(host, port, timeout=3) -> UrlCheckResult:
     )
 
 
-def check_url_availability_by_url(url: str, timeout: int = 3) -> UrlCheckResult:
+def check_url_availability_by_url(url: str, timeout: int = 3, session: Session = None) -> UrlCheckResult:
     if url.startswith("http"):
-        return check_url_availability_by_url_with_http_request(url, timeout)
+        r = check_url_availability_by_url_with_http_request(url, timeout, session=session)
+        if not r.error:
+            return r
 
-    parsed = urlparse(url)
-    host = parsed.hostname
-    port = parsed.port
-    return check_url_availability_with_socket(host, port, timeout)
+    host, port = parse_url(url)
+    r = check_url_availability_with_socket(host, port, timeout)
+    if not r.error:
+        return r
+
+    return check_with_telnet(host, port, timeout)
 
 
-def check_url_availability_by_url_with_http_request(url: str, timeout: int = 3) -> UrlCheckResult:
-    response = None
-    parsed = urlparse(url)
-    host = parsed.hostname
-    port = parsed.port
-    r = UrlCheckResult(host=host, port=port, status="available")
+def check_with_telnet(host, port, timeout=3) -> UrlCheckResult:
+    result = UrlCheckResult(host=host, port=port, method="telnet")
+
+    start = time.time()
+
+    # Команда: автоматически отправляем "quit", чтобы telnet завершился
+    cmd = [
+        "sh", "-c",
+        f"(echo quit) | timeout {timeout} telnet {host} {port}"
+    ]
+
     try:
-        response = requests.head(url, timeout=timeout)
-        response.raise_for_status()
+        proc = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+
+        result.response_time_ms = (time.time() - start) * 1000
+
+        output = proc.stdout + proc.stderr
+
+        if "Connected" in output or "Escape character" in output:
+            result.status = "OK"
+        else:
+            result.status = "FAIL"
+            result.error = output.strip()
+
+    except Exception as e:
+        result.status = "unavailable"
+        result.error = str(e)
+
+    return result
+
+
+def parse_url(url):
+    parsed = urlparse(url)
+    host = parsed.hostname
+    port = parsed.port
+    if not port:
+        port = 443 if host.startswith("https") else 80
+    return host, port
+
+
+def check_url_availability_by_url_with_http_request(url: str, timeout: int = 3, session=None) -> UrlCheckResult:
+    response = None
+    host, port = parse_url(url)
+    r = UrlCheckResult(host=host, port=port, status="available", method="http_request")
+    try:
+        if not session:
+            session = requests
+        response = session.head(url, timeout=timeout)
+        r.response_time_ms = response.elapsed.total_seconds() / 1000
         return r
     except BaseException as ex:
         msg = str(ex)
@@ -1135,3 +1187,24 @@ def with_empty_method(cls):
 
     setattr(cls, "empty", empty)
     return cls
+
+
+def group_list(a: list[dict], key: str, *fields_to_average) -> list[dict]:
+    grouped = defaultdict(list)
+
+    # Группировка по url
+    for item in a:
+        grouped[item[key]].append(item)
+
+    result = []
+
+    for url, items in grouped.items():
+        base = items[0].copy()
+
+        # Усредняем указанные поля
+        for field in fields_to_average:
+            base[field] = sum(i[field] for i in items) / len(items)
+
+        result.append(base)
+
+    return result

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import uvicorn
 from fastapi import FastAPI
 from retrying import retry
+from src.mybootstrap_core_itskovichanton.utils import check_url_availability_by_url
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 from src.mybootstrap_mvc_fastapi_itskovichanton.middleware_logging import HTTPLoggingMiddleware
@@ -17,13 +18,10 @@ from src.mybootstrap_core_itskovichanton.info.backend.info import GetInfoUsecase
 from src.mybootstrap_core_itskovichanton.info.frontend.support import InfoFastAPISupport
 from src.mybootstrap_core_itskovichanton.logger import LoggerService, log
 from src.mybootstrap_core_itskovichanton.metrics_export import MetricsExporter
-from src.mybootstrap_core_itskovichanton.realtime_config import RealTimeConfigManager
-from src.mybootstrap_core_itskovichanton.realtimeconfig.support import RealtimeConfigFastAPISupport
 
 from src.mybootstrap_core_itskovichanton.redis_service import RedisService
 from src.mybootstrap_core_itskovichanton.shell import ShellService
 from test_ioc import AbstractService, MyBean
-from test_etcd import MyService
 
 
 @dataclass
@@ -62,13 +60,11 @@ class TestCoreApp(Application):
     mybean: MyBean
     me: MetricsExporter
     rds: RedisService
-    real_time_config: RealTimeConfigManager
-    rt_fapi_support: RealtimeConfigFastAPISupport
     info_fapi_support: InfoFastAPISupport
-    my_service: MyService
     get_info_uc: GetInfoUsecase
 
     def init(self, **kwargs):
+        check_url_availability_by_url(url="http://10.60.0.49:8085")
         self.logger = self.logger_service.get_file_logger("tests")
 
     @retry(wait_fixed=10000)
@@ -151,7 +147,6 @@ class TestCoreApp(Application):
 
     def init_fast_api(self) -> FastAPI:
         r = FastAPI(title='cherkizon', debug=False)
-        self.rt_fapi_support.mount(r)
         self.info_fapi_support.mount(r)
         # self.healthcheck_support.mount(r)
         r.add_middleware(HTTPLoggingMiddleware, encoding="utf-8", logger=self.logger_service.get_file_logger("http"))

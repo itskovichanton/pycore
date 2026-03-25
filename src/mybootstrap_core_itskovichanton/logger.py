@@ -34,6 +34,7 @@ from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep,
 class RequestStats:
     times: deque = field(default_factory=lambda: deque(maxlen=200))
     connection_success_count: int = 0
+    last_time: float = None
     connection_fail_count: int = 0
     err_response_count: int = 0
     connection_problem_actual: bool = False
@@ -52,6 +53,7 @@ class RequestStats:
 
     def summary(self):
         return {
+            "ago_sec": (time.perf_counter() - self.last_time) if self.last_time else None,
             "connection_problem_actual": self.connection_problem_actual,
             "err_response_problem_actual": self.err_response_problem_actual,
             "last_err_response": self.last_err_response,
@@ -207,8 +209,8 @@ class SessionStats:
 
 
 @singleton(ttl=5 * 60)
-def _check_url_availability(url):
-    return check_url_availability_by_url(url)
+def _check_url_availability(url, session=None):
+    return check_url_availability_by_url(url, session=session)
 
 
 class SessionWithStats(requests.Session):
@@ -229,7 +231,7 @@ class SessionWithStats(requests.Session):
     def stats(self) -> SessionStats:
         r = SessionStats(stats=self._stats)
         if self._url:
-            r.availability = _check_url_availability(self._url)
+            r.availability = _check_url_availability(self._url, session=self)
         return r
 
     def request(self, method, url, *args, **kwargs):
@@ -277,6 +279,7 @@ class SessionWithStats(requests.Session):
                     # содеинение успешно, разбираем ответ
                     st.connection_problem_actual = False
                     st.connection_success_count += 1
+                    st.last_time = time.perf_counter()
                     if self._error_words_detectors:
                         st.err_response_problem_actual = any(w in resp_body for w in self._error_words_detectors or [])
                         if st.err_response_problem_actual:
