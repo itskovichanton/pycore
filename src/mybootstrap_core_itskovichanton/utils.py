@@ -371,6 +371,14 @@ def trim_string(s: str, limit: int, ellipsis='…') -> str:
     return s
 
 
+def trim_string_in_middle(s: str, limit_left: int, limit_right: int, ellipsis='...') -> str:
+    # Если строка и так короче, чем сумма лимитов, возвращаем её как есть
+    if len(s) <= limit_left + limit_right:
+        return s
+
+    return f"{s[:limit_left]}{ellipsis}{s[-limit_right:]}"
+
+
 def convert_to_int(s, default=0):
     if not s:
         return default
@@ -925,18 +933,25 @@ def check_url_availability_with_socket(host, port, timeout=3) -> UrlCheckResult:
     )
 
 
-def check_url_availability_by_url(url: str, timeout: int = 3, session: Session = None) -> UrlCheckResult:
+def check_url_availability_by_url(url: str, timeout: int = 3, session: Session = None,
+                                  enable_socket_check=True, enable_telnet_check=True) -> UrlCheckResult:
+    r = None
+
     if url.startswith("http"):
         r = check_url_availability_by_url_with_http_request(url, timeout, session=session)
         if not r.error:
             return r
 
     host, port = parse_url(url)
-    r = check_url_availability_with_socket(host, port, timeout)
-    if not r.error:
-        return r
+    if enable_socket_check:
+        r = check_url_availability_with_socket(host, port, timeout)
+        if not r.error:
+            return r
 
-    return check_with_telnet(host, port, timeout)
+    if enable_telnet_check:
+        return check_with_telnet(host, port, timeout)
+
+    return r
 
 
 def check_with_telnet(host, port, timeout=3) -> UrlCheckResult:

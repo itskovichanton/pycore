@@ -20,9 +20,11 @@ import requests
 
 from pythonjsonlogger import jsonlogger
 from requests import Session
+from requests.adapters import HTTPAdapter
 from src.mybootstrap_ioc_itskovichanton import ioc
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
+from urllib3 import Retry
 
 from src.mybootstrap_core_itskovichanton import alerts
 from src.mybootstrap_core_itskovichanton.alerts import Alert
@@ -79,7 +81,7 @@ class LoggerService(Protocol):
         ...
 
     def get_logged_session(self, logger_name="outgoing-requests", url=None, route=None,
-                           error_words_detectors=None) -> Session:
+                           error_words_detectors=None, retry: Retry | int | str | None = 0) -> Session:
         ...
 
     def get_file_logger(self, name: str, encoding: str = "utf-8",
@@ -215,7 +217,8 @@ def _check_url_availability(url, session=None):
 
 class SessionWithStats(requests.Session):
 
-    def __init__(self, name, logger=None, url=None, route=None, error_words_detectors=None):
+    def __init__(self, name, logger=None, url=None, route=None, error_words_detectors=None,
+                 retry: Retry | int | str | None = 0):
         super().__init__()
         self.name = name
         self._stats = defaultdict(RequestStats)
@@ -226,6 +229,10 @@ class SessionWithStats(requests.Session):
         self._logger = logger or logging.getLogger(name)
         self._url = url
         self._route = route
+        if retry:
+            adapter = HTTPAdapter(max_retries=retry)
+            self.mount("https://", adapter)
+            self.mount("http://", adapter)
 
     @property
     def stats(self) -> SessionStats:
@@ -366,10 +373,11 @@ class LoggerServiceImpl(LoggerService):
 
     @singleton
     def get_logged_session(self, logger_name="outgoing-requests", url=None, route=None,
-                           error_words_detectors=None) -> Session:
+                           error_words_detectors=None,
+                           retry: Retry | int | str | None = 0) -> Session:
         logger = self.get_file_logger(logger_name)
         r = SessionWithStats(f"{self.config_service.app_name()}:{logger_name}", logger, url, route,
-                             error_words_detectors)
+                             error_words_detectors, retry)
         self._sessions[logger_name] = r
         return r
 

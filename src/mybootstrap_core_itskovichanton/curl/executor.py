@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from src.mybootstrap_core_itskovichanton.logger import LoggerService
+
 from src.mybootstrap_core_itskovichanton.ssh import SSHConfig, DownloadFileArgs
 
 from src.mybootstrap_core_itskovichanton.utils import with_empty_method
@@ -78,13 +80,28 @@ def _parse_response(output: str) -> Response:
 @bean
 class Curl:
     shell: ShellService
+    logger_service: LoggerService
 
-    def execute(self, curl_builder: CurlBuilder, cwd=None, ssh_config: SSHConfig = None) -> Response:
+    def execute(self, name: str, curl_builder: CurlBuilder, cwd=None, ssh_config: SSHConfig = None) -> Response:
+        lg = self.logger_service.get_file_logger(name)
         curl_cmd = curl_builder.verbose().store_headers_file('"$headers"').build()
         if ssh_config and curl_builder.get_output():
             ssh_config.download_file_args = DownloadFileArgs(remote_path=curl_builder.get_output())
         curl_output = self.shell.execute_bash(_build_curl_cmd(curl_cmd), cwd=cwd, ssh_config=ssh_config)
-        r = _parse_response(curl_output)
+        a = curl_builder.get_command_summary()
+        r = None
+        try:
+            r = _parse_response(curl_output)
+        except BaseException as ex:
+            a['err'] = str(ex)
+            raise ex
+        finally:
+            a['result'] = r
+            if 'err' in a:
+                lg.error(a)
+            else:
+                lg.info(a)
+
         if r.empty():
             raise CoreException(message="Пустой результат curl. Возможно нужно выполнять с sudo")
         if ssh_config:
