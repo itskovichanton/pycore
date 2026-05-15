@@ -1,12 +1,9 @@
 import json
 import shlex
-from typing import Optional, Union, List, Dict, Any
-from pathlib import Path
-from dataclasses import dataclass, field
-from enum import Enum
 import urllib.parse
-
+from enum import Enum
 from src.mybootstrap_core_itskovichanton.utils import is_listable
+from typing import Optional, Union, List, Dict, Any
 
 
 class HttpMethod(Enum):
@@ -254,7 +251,7 @@ class CurlBuilder:
             self для цепочки вызовов
         """
         self._json_data = data
-        return self
+        return self.method(HttpMethod.POST)
 
     def timeout(self, seconds: int) -> 'CurlBuilder':
         """
@@ -878,6 +875,7 @@ class CurlBuilder:
         """
         return {
             "url": self._url,
+            "json": self._json_data,
             "method": self._method.value if self._method else "GET",
             "headers": self._headers,
             "cookies": self._cookies,
