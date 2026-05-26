@@ -1,15 +1,11 @@
 from dataclasses import dataclass
-
+from src.mybootstrap_core_itskovichanton.curl.builder import CurlBuilder
 from src.mybootstrap_core_itskovichanton.logger import LoggerService
-
-from src.mybootstrap_core_itskovichanton.ssh import SSHConfig, DownloadFileArgs
-
-from src.mybootstrap_core_itskovichanton.utils import with_empty_method
-from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException
-
-from src.mybootstrap_core_itskovichanton.curl.builder import CURL_CMD_DEFAULT, CurlBuilder
 from src.mybootstrap_core_itskovichanton.shell import ShellService
+from src.mybootstrap_core_itskovichanton.ssh import SSHConfig, DownloadFileArgs
+from src.mybootstrap_core_itskovichanton.utils import with_empty_method
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
+from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException
 
 
 def _build_curl_cmd(curl_command: str):
@@ -21,17 +17,26 @@ headers=$(mktemp)
 
 {curl_command} >"$output" 2>"$error_output"
 
-response_headers=$(cat "$headers")
-response_body=$(cat "$output")
+# Читаем заголовки и тело, если файлы есть
+[ -f "$headers" ] && response_headers=$(cat "$headers") || response_headers=""
+[ -f "$output" ] && response_body=$(cat "$output") || response_body=""
 
-rm "$headers" "$output" "$error_output"
+# Проверяем существование файла ошибки перед чтением
+if [ -f "$error_output" ]; then
+    response_error=$(cat "$error_output")
+else
+    response_error=""
+fi
+
+# Удаляем файлы только после того, как прочитали их в переменные
+rm -rf "$headers" "$output" "$error_output"
 
 echo "---RESPONSE-HEADERS---"
 echo "$response_headers"
 echo "---RESPONSE-BODY---"
 echo "$response_body"
 echo "---ERROR---"
-echo "$(cat "$error_output")"
+echo "$response_error"
 """
 
 
@@ -84,10 +89,11 @@ class Curl:
 
     def execute(self, name: str, curl_builder: CurlBuilder, cwd=None, ssh_config: SSHConfig = None) -> Response:
         lg = self.logger_service.get_file_logger(name)
-        curl_cmd = curl_builder.verbose().store_headers_file('"$headers"').build()
+        curl_cmd = curl_builder.store_headers_file('"$headers"').build()
         if ssh_config and curl_builder.get_output():
             ssh_config.download_file_args = DownloadFileArgs(remote_path=curl_builder.get_output())
         curl_output = self.shell.execute_bash(_build_curl_cmd(curl_cmd), cwd=cwd, ssh_config=ssh_config)
+        print(curl_output)
         a = curl_builder.get_command_summary()
         r = None
         try:

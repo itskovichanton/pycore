@@ -1,17 +1,15 @@
+from os.path import basename
+
 import os
 import subprocess
 import tempfile
-from dataclasses import dataclass
-from os.path import basename
-from typing import Protocol
-
-from src.mybootstrap_ioc_itskovichanton.config import ConfigService
-from src.mybootstrap_ioc_itskovichanton.ioc import bean
-from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException
-
 from src.mybootstrap_core_itskovichanton.logger import log
 from src.mybootstrap_core_itskovichanton.ssh import SSHConfig, SSHClient
 from src.mybootstrap_core_itskovichanton.utils import is_windows
+from src.mybootstrap_ioc_itskovichanton.config import ConfigService
+from src.mybootstrap_ioc_itskovichanton.ioc import bean
+from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException
+from typing import Protocol
 
 
 class ShellService(Protocol):
@@ -38,11 +36,12 @@ class ShellServiceImpl(ShellService):
         args = [str(x) for x in args]
         if self.print_commands:
             print(" ".join(args))
-        return subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding=encoding, cwd=cwd)
+        return subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding=encoding, cwd=cwd,
+                                text=True)
 
     @log("shell")
     def execute(self, *args, encoding: str = None, cwd=None, suppress_error=None):
-        output, error = self.popen(*args, encoding=encoding, cwd=cwd).communicate()
+        output, error = self.popen(*args, encoding=encoding, cwd=cwd).communicate(timeout=30)
         print(f"error={error}")
         print(f"output={output}")
         if error:
@@ -74,9 +73,10 @@ class ShellServiceImpl(ShellService):
         global script_file
         try:
             # Создаем временный файл для скрипта
-            script_file = tempfile.NamedTemporaryFile(mode='w', suffix='.sh', delete=False)
+            script_file = tempfile.NamedTemporaryFile(mode='w', suffix='.sh', delete=False, dir=cwd)
             script_file.write(script)
             script_file.close()
+            print(f"------\n{script}\n-------")
             return self.execute("bash", script_file.name, *[f"{k} {v}" for k, v in kwargs], cwd=cwd,
                                 suppress_error=lambda err: err.startswith("cat: /tmp/"))
         finally:

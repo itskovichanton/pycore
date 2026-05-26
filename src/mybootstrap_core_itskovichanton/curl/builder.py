@@ -2,8 +2,9 @@ import json
 import shlex
 import urllib.parse
 from enum import Enum
-from src.mybootstrap_core_itskovichanton.utils import is_listable
 from typing import Optional, Union, List, Dict, Any
+
+from src.mybootstrap_core_itskovichanton.utils import is_listable
 
 
 class HttpMethod(Enum):
@@ -761,6 +762,8 @@ class CurlBuilder:
 
         # URL в конце
         parts.append(self._escape_shell_arg(self._url))
+
+        parts.extend(["--no-progress-meter", "--silent", "--show-error"])
 
         return " ".join(parts)
 

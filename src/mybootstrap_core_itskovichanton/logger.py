@@ -274,7 +274,7 @@ class SessionWithStats(requests.Session):
             else:
                 route = url.split("?")[0]
 
-            resp_body = _adapt_body(response.content if response else None,
+            resp_body = _adapt_body(response.content,
                                     response.headers.get("content-type")
                                     if response and response.headers else None)
 
