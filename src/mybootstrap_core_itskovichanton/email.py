@@ -2,9 +2,8 @@ import smtplib
 from dataclasses import dataclass
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Protocol
-
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
+from typing import Protocol
 
 
 @dataclass
@@ -21,7 +20,6 @@ class EmailConfig:
 @dataclass
 class Params:
     toEmail: str | list[str]
-    senderEmail: str
     subject: str
     content_plain: str = ""
     content_html: str = ""
@@ -37,7 +35,7 @@ class EmailService(Protocol):
 class EmailServiceImpl(EmailService):
 
     def send(self, a: Params):
-        if self.config is None and not a.content_plain and not a.content_html:
+        if self.config is None or not (a.content_plain or a.content_html):
             return
 
         msg = MIMEMultipart()
