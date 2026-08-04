@@ -41,7 +41,7 @@ class ShellServiceImpl(ShellService):
 
     @log("shell")
     def execute(self, *args, encoding: str = None, cwd=None, suppress_error=None):
-        output, error = self.popen(*args, encoding=encoding, cwd=cwd).communicate(timeout=30)
+        output, error = self.popen(*args, encoding=encoding, cwd=cwd).communicate(timeout=300)
         print(f"error={error}")
         print(f"output={output}")
         if error:

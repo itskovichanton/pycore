@@ -294,7 +294,7 @@ class SessionWithStats(requests.Session):
                     st.connection_problem_actual = True
                     st.connection_fail_count += 1
                     st.last_err = str(exc)
-                if response:
+                if response is not None:
                     st.response_statuses[str(response.status_code)] += 1
 
             # Логирование
@@ -306,10 +306,10 @@ class SessionWithStats(requests.Session):
                     "body": _adapt_body(req_body, req_headers.get("content-type") if req_headers else None),
                 },
                 "res": {
-                    "code": response.status_code if response else None,
-                    "reason": response.reason if response else None,
-                    "url": response.url if response else None,
-                    "headers": dict(response.headers) if response and response.headers else None,
+                    "code": response.status_code if response is not None else None,
+                    "reason": response.reason if response is not None else None,
+                    "url": response.url if response is not None else None,
+                    "headers": dict(response.headers) if response is not None and response.headers else None,
                     "body": resp_body,
                 },
                 "err": str(exc) if exc else None,
