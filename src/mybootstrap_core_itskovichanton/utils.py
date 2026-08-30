@@ -276,6 +276,13 @@ def is_standard_value_object(obj):
                        XmlDateTime)) or isclass(obj)
 
 
+def to_dict_deep_lower_first_char(r):
+    def key_mapper(_, b) -> str:
+        return b[0].lower() + b[1:]
+
+    return to_dict_deep(r, key_mapper=key_mapper)
+
+
 def to_dict_deep(obj, route=(),
                  is_value_object: Callable[[tuple, str], bool] = None,
                  key_mapper: Callable[[tuple, str], str] = lambda _, x: x,
@@ -1218,7 +1225,7 @@ def group_list(a: list[dict], key: str, *fields_to_average) -> list[dict]:
 
         # Усредняем указанные поля
         for field in fields_to_average:
-            base[field] = sum(i[field] for i in items) / len(items)
+            base[field] = sum((i[field] or 0) for i in items) / len(items)
 
         result.append(base)
 
