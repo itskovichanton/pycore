@@ -23,7 +23,7 @@ import zlib
 from collections import abc, defaultdict
 from collections.abc import MutableMapping
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, time
 from decimal import Decimal
 from enum import Enum, EnumType
 from inspect import isclass
@@ -267,12 +267,14 @@ def to_dict(obj, remove_none_values: bool = False):
 def encode_json_value(_, obj):
     if isinstance(obj, (datetime, date)):
         return obj.isoformat()
+    if isinstance(obj, (datetime, time)):
+        return obj.isoformat()
     return obj
 
 
 def is_standard_value_object(obj):
     return isinstance(obj,
-                      (Enum, str, int, float, date, datetime, Decimal, timedelta, XmlDate, XmlTime,
+                      (Enum, time, str, int, float, date, str, datetime, Decimal, timedelta, XmlDate, XmlTime,
                        XmlDateTime)) or isclass(obj)
 
 
@@ -664,13 +666,13 @@ def singleton(ttl=None):
             key = tuple(calc_hash(k) for k in key + (get_method_name(func),))
 
             if key in cache_timestamps:
-                if ttl is not None and 0 < ttl < (time.time() - cache_timestamps[key]):
+                if ttl is not None and 0 < ttl < (time() - cache_timestamps[key]):
                     del singleton_cache[key]
                     del cache_timestamps[key]
 
             if key not in singleton_cache:
                 singleton_cache[key] = await func(*args, **kwargs)
-                cache_timestamps[key] = time.time()
+                cache_timestamps[key] = time()
 
             return singleton_cache[key]
 
@@ -685,13 +687,13 @@ def singleton(ttl=None):
             key = tuple(calc_hash(k) for k in key + (get_method_name(func),))
 
             if key in cache_timestamps:
-                if ttl is not None and 0 < ttl < (time.time() - cache_timestamps[key]):
+                if ttl is not None and 0 < ttl < (time() - cache_timestamps[key]):
                     del singleton_cache[key]
                     del cache_timestamps[key]
 
             if key not in singleton_cache:
                 singleton_cache[key] = func(*args, **kwargs)
-                cache_timestamps[key] = time.time()
+                cache_timestamps[key] = time()
 
             return singleton_cache[key]
 
@@ -917,7 +919,7 @@ class UrlCheckResult:
 
 
 def check_url_availability_with_socket(host, port, timeout=3) -> UrlCheckResult:
-    start = time.time()
+    start = time()
     status = "available"
     error = None
 
@@ -928,7 +930,7 @@ def check_url_availability_with_socket(host, port, timeout=3) -> UrlCheckResult:
         status = "unavailable"
         error = str(e)
     finally:
-        response_time = round((time.time() - start) * 1000, 2)
+        response_time = round((time() - start) * 1000, 2)
 
     return UrlCheckResult(
         method="socket",
@@ -964,7 +966,7 @@ def check_url_availability_by_url(url: str, timeout: int = 3, session: Session =
 def check_with_telnet(host, port, timeout=3) -> UrlCheckResult:
     result = UrlCheckResult(host=host, port=port, method="telnet")
 
-    start = time.time()
+    start = time()
 
     # Команда: автоматически отправляем "quit", чтобы telnet завершился
     cmd = [
@@ -980,7 +982,7 @@ def check_with_telnet(host, port, timeout=3) -> UrlCheckResult:
             text=True
         )
 
-        result.response_time_ms = (time.time() - start) * 1000
+        result.response_time_ms = (time() - start) * 1000
 
         output = proc.stdout + proc.stderr
 

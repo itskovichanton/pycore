@@ -83,4 +83,4 @@ class RateLimiter:
 
 from src.mybootstrap_core_itskovichanton.di import injector
 
-util = injector().inject(RateLimiter).rate_limit
+rate_limited = injector().inject(RateLimiter).rate_limit
