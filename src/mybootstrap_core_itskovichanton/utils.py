@@ -23,6 +23,7 @@ import zlib
 from collections import abc, defaultdict
 from collections.abc import MutableMapping
 from concurrent.futures import ThreadPoolExecutor
+import time as tm
 from datetime import date, datetime, timedelta, time
 from decimal import Decimal
 from enum import Enum, EnumType
@@ -538,7 +539,7 @@ def repeat(interval=0, count=-1):
                         raise ex
                 n += 1
                 if interval > 0:
-                    time.sleep(interval)
+                    tm.sleep(interval)
 
         return wrapper
 
@@ -719,7 +720,7 @@ def scheduled(everyday_time):
             schedule.every().day.at(everyday_time).do(func, *args, **kwargs)
             while True:
                 schedule.run_pending()
-                time.sleep(1)
+                tm.sleep(1)
 
         return wrapper
 
@@ -729,7 +730,7 @@ def scheduled(everyday_time):
             schedule.every().day.at(everyday_time).do(func, self, *args, **kwargs)
             while True:
                 schedule.run_pending()
-                time.sleep(1)
+                tm.sleep(1)
 
         return wrapper
 
