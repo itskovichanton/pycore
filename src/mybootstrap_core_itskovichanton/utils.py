@@ -16,6 +16,7 @@ import subprocess
 import sys
 import threading
 import time
+import time as tm
 import traceback
 import urllib
 import uuid
@@ -23,7 +24,6 @@ import zlib
 from collections import abc, defaultdict
 from collections.abc import MutableMapping
 from concurrent.futures import ThreadPoolExecutor
-import time as tm
 from datetime import date, datetime, timedelta, time
 from decimal import Decimal
 from enum import Enum, EnumType
@@ -667,7 +667,9 @@ def singleton(ttl=None):
             key = tuple(calc_hash(k) for k in key + (get_method_name(func),))
 
             if key in cache_timestamps:
-                if ttl is not None and 0 < ttl < (time() - cache_timestamps[key]):
+                if ttl is not None and 0 < ttl < ((
+                        datetime.combine(datetime.now(), time()) - datetime.combine(datetime.now(),
+                                                                                    cache_timestamps[key])).seconds):
                     del singleton_cache[key]
                     del cache_timestamps[key]
 
@@ -688,7 +690,9 @@ def singleton(ttl=None):
             key = tuple(calc_hash(k) for k in key + (get_method_name(func),))
 
             if key in cache_timestamps:
-                if ttl is not None and 0 < ttl < (time() - cache_timestamps[key]):
+                if ttl is not None and 0 < ttl < (
+                        datetime.combine(datetime.now(), time()) - datetime.combine(datetime.now(),
+                                                                                    cache_timestamps[key])).seconds:
                     del singleton_cache[key]
                     del cache_timestamps[key]
 
@@ -931,7 +935,8 @@ def check_url_availability_with_socket(host, port, timeout=3) -> UrlCheckResult:
         status = "unavailable"
         error = str(e)
     finally:
-        response_time = round((time() - start) * 1000, 2)
+        response_time = (datetime.combine(datetime.now(), time()) - datetime.combine(datetime.now(),
+                                                                                     start)).microseconds / 1000
 
     return UrlCheckResult(
         method="socket",
@@ -983,7 +988,8 @@ def check_with_telnet(host, port, timeout=3) -> UrlCheckResult:
             text=True
         )
 
-        result.response_time_ms = (time() - start) * 1000
+        result.response_time_ms = (datetime.combine(datetime.now(), time()) - datetime.combine(datetime.now(),
+                                                                                               start)).microseconds / 1000
 
         output = proc.stdout + proc.stderr
 
