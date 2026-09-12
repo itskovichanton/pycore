@@ -253,7 +253,7 @@ class SessionWithStats(requests.Session):
             req_headers = {}
 
         if self.name:
-            req_headers["User-Agent"] = 'mbulak:'+self.name
+            req_headers["User-Agent"] = 'mbulak:' + self.name
         req_headers["X-Request-ID"] = generate_uid()
 
         try:
@@ -370,9 +370,8 @@ class LoggerServiceImpl(LoggerService):
 
     @singleton
     def get_logged_session(self, logger_name="outgoing-requests", url=None, route=None,
-                           error_words_detectors=None,
-                           retry: Retry | int | str | None = 0) -> Session:
-        logger = self.get_file_logger(logger_name)
+                           error_words_detectors=None, retry: Retry | int | str | None = 0) -> Session:
+        logger = self.get_file_logger(f"outgoing_http_{logger_name}")
         r = SessionWithStats(f"{self.config_service.app_name()}:{logger_name}", logger, url, route,
                              error_words_detectors, retry)
         self._sessions[logger_name] = r
