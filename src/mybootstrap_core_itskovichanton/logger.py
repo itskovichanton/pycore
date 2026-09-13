@@ -21,7 +21,7 @@ from requests import Session
 from requests.adapters import HTTPAdapter
 from src.mybootstrap_core_itskovichanton import alerts
 from src.mybootstrap_core_itskovichanton.alerts import Alert
-from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, unescape_str, singleton, generate_uid, \
+from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, singleton, generate_uid, \
     UrlCheckResult, check_url_availability_by_url, is_listable
 from src.mybootstrap_ioc_itskovichanton import ioc
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
@@ -88,6 +88,10 @@ class LoggerService(Protocol):
 
 
 class SimpleJsonFormatter(jsonlogger.JsonFormatter):
+    """
+    Одна строка = один валидный JSON-объект.
+    Нельзя unescape'ить результат json.dumps — иначе ломаются кавычки/\\n и лог перестаёт быть JSON.
+    """
 
     def __init__(self, *args, trim_values_len=3000, **kwargs):
         super().__init__(*args, **kwargs)
@@ -102,15 +106,25 @@ class SimpleJsonFormatter(jsonlogger.JsonFormatter):
         log_record.pop("msg", None)
 
         if self.trim_values_len > 0:
-            trimmed_e = to_dict_deep(log_record,
-                                     value_mapper=lambda _, v: trim_string(v, limit=self.trim_values_len)
-                                     if type(v) == str else v)
+            trimmed_e = to_dict_deep(
+                log_record,
+                value_mapper=lambda _, v: self._sanitize_value(v),
+            )
             log_record.clear()
             log_record.update(trimmed_e)
 
+    def _sanitize_value(self, v):
+        """Обрезка строк + убрать CR/LF из значений (лог — строго одна строка на запись)."""
+        if not isinstance(v, str):
+            return v
+        v = v.replace("\r\n", " ").replace("\n", " ").replace("\r", " ")
+        if self.trim_values_len > 0:
+            v = trim_string(v, limit=self.trim_values_len)
+        return v
+
     def jsonify_log_record(self, log_record):
-        r = super().jsonify_log_record(log_record)
-        return unescape_str(r)
+        # только валидный JSON; без unescape_str (он превращал \" и \\n в сырой текст)
+        return super().jsonify_log_record(log_record)
 
     def preprocess_log_record(self, log_record):
         ...
