@@ -1,33 +1,34 @@
-from collections import deque, defaultdict
-from logging import Logger
-
 import codecs
 import functools
 import glob
 import logging
 import logging.handlers
 import os
-import requests
 import threading
 import time
 import traceback
 import uuid
 import zipfile
+from collections import deque, defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
+from logging import Logger
 from pathlib import Path
+from typing import Protocol
+
+import requests
 from pythonjsonlogger import jsonlogger
 from requests import Session
 from requests.adapters import HTTPAdapter
+from src.mybootstrap_ioc_itskovichanton import ioc
+from src.mybootstrap_ioc_itskovichanton.config import ConfigService
+from src.mybootstrap_ioc_itskovichanton.ioc import bean
+from urllib3 import Retry
+
 from src.mybootstrap_core_itskovichanton import alerts
 from src.mybootstrap_core_itskovichanton.alerts import Alert
 from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, singleton, generate_uid, \
     UrlCheckResult, check_url_availability_by_url, is_listable
-from src.mybootstrap_ioc_itskovichanton import ioc
-from src.mybootstrap_ioc_itskovichanton.config import ConfigService
-from src.mybootstrap_ioc_itskovichanton.ioc import bean
-from typing import Protocol
-from urllib3 import Retry
 
 
 @dataclass
@@ -227,6 +228,10 @@ def _check_url_availability(url, session=None):
     return check_url_availability_by_url(url, session=session)
 
 
+_extra_log_prefix = "__log__"
+_extra_log_prefix_len = len(_extra_log_prefix)
+
+
 class SessionWithStats(requests.Session):
 
     def __init__(self, name, logger=None, url=None, route=None, error_words_detectors=None,
@@ -328,6 +333,8 @@ class SessionWithStats(requests.Session):
                 },
                 "err": str(exc) if exc else None,
                 "elapsed": elapsed,
+                "extra": {k[_extra_log_prefix_len - 1:]: to_dict_deep(v) for k, v in kwargs.items() if
+                          k.startswith(_extra_log_prefix)} or None
             }
 
             self._logger.info(extra)
