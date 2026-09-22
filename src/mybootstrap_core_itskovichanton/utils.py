@@ -381,12 +381,19 @@ def trim_string(s: str, limit: int, ellipsis='…') -> str:
     return s
 
 
-def trim_string_in_middle(s: str, limit_left: int, limit_right: int, ellipsis='...') -> str:
+def trim_string_in_middle(s: str, limit_left: int, limit_right: int, ellipsis='…') -> str:
     # Если строка и так короче, чем сумма лимитов, возвращаем её как есть
     if len(s) <= limit_left + limit_right:
         return s
 
-    return f"{s[:limit_left]}{ellipsis}{s[-limit_right:]}"
+    return f"{s[:limit_left]}{ellipsis}{s[1 - limit_right:]}"
+
+
+def trim_exc_tb(e: BaseException, limit: int) -> str:
+    trace = [line.strip() for line in traceback.format_exception(e)]
+    limit_left = limit // 2
+    limit_right = limit - limit_left
+    return trim_string_in_middle('\n'.join(trace), limit_left, limit_right)
 
 
 def convert_to_int(s, default=0):
