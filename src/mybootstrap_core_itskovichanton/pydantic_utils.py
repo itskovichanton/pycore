@@ -1,7 +1,7 @@
 from typing import Annotated, Optional
 from datetime import date, datetime
 
-from pydantic_utils import BeforeValidator, PlainSerializer, computed_field
+from pydantic import BeforeValidator, PlainSerializer, computed_field
 
 
 def get_formatted_date_type(input_formats: list[str], output_format: str) -> type:
