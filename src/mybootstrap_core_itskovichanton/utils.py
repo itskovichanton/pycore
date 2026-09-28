@@ -949,10 +949,11 @@ def check_url_availability_with_socket(host, port, timeout=3) -> UrlCheckResult:
 
 
 def check_url_availability_by_url(url: str, timeout: int = 3, session: Session = None,
-                                  enable_socket_check=True, enable_telnet_check=True) -> UrlCheckResult:
+                                  enable_http_call_check=False, enable_socket_check=True,
+                                  enable_telnet_check=True) -> UrlCheckResult:
     r = None
 
-    if url.startswith("http"):
+    if enable_http_call_check and url.startswith("http"):
         r = check_url_availability_by_url_with_http_request(url, timeout, session=session)
         if not r.error:
             return r
