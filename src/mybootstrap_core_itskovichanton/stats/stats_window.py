@@ -53,7 +53,10 @@ class StatsWindow:
         durations = [x.duration for x in self.items]
         sorted_d = sorted(durations)
 
-        avg_v = mean(durations)
+        try:
+            avg_v = mean(durations) if durations else 0
+        except:
+            avg_v = 0
         max_v = max(durations)
         min_v = min(durations)
         med_v = median(durations)
