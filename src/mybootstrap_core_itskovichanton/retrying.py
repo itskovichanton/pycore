@@ -13,13 +13,13 @@
 # limitations under the License.
 
 import random
-from collections import deque
-from statistics import mean
-
-import six
+import statistics
 import sys
 import time
 import traceback
+from collections import deque
+
+import six
 
 # sys.maxint / 2, since Python 3.2 doesn't have a sys.maxint...
 MAX_WAIT = 1073741823
@@ -43,9 +43,13 @@ def set_stop_max_delay(value, f=None):
     _set_attr_value("_stop_max_delay", value, f)
 
 
+def _mean(a):
+    return statistics.mean(a) if a else 0
+
+
 def get_summary():
-    return {"avg_attempts": mean([mean(x._attempt_number) for x in _retryings_cache.values()]),
-            "wait_interval": mean([x._wait_fixed for x in _retryings_cache.values()])}
+    return {"avg_attempts": _mean([_mean(x._attempt_number) for x in _retryings_cache.values()]),
+            "wait_interval": _mean([x._wait_fixed for x in _retryings_cache.values()])}
 
 
 def _set_attr_value(attr, value, f=None):
