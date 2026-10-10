@@ -103,7 +103,7 @@ class SimpleJsonFormatter(jsonlogger.JsonFormatter):
             log_record['t'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
         self.preprocess_log_record(log_record)
-        log_record.pop("msg", None)
+        # log_record.pop("msg", None)
 
         if self.trim_values_len > 0:
             trimmed_e = to_dict_deep(
