@@ -15,7 +15,6 @@ import uuid
 import zipfile
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
 from pythonjsonlogger import jsonlogger
 from requests import Session
 from requests.adapters import HTTPAdapter
@@ -152,6 +151,7 @@ class TimedCompressedRotatingFileHandler(logging.handlers.TimedRotatingFileHandl
         self.archive_type = archive_type
 
     def doRollover(self):
+        now = int(time.time())
 
         if self.stream:
             self.stream.close()
@@ -163,22 +163,26 @@ class TimedCompressedRotatingFileHandler(logging.handlers.TimedRotatingFileHandl
         if os.path.exists(dfn):
             os.remove(dfn)
         os.rename(self.baseFilename, dfn)
+
         if self.backupCount > 0:
-            # find the oldest log file and delete it
-            # s = glob.glob(self.baseFilename + ".20*")
-            s = glob.glob(f"{Path(self.baseFilename).parent.absolute()}/*.{datetime.now().year}*")
-            if len(s) > self.backupCount:
-                s.sort()
-                os.remove(s[0])
+            # delete old log files
+            # self.baseFilename is already absolute
+            # . after baseFilename assumes it's an archive.
+            s = glob.glob(f"{glob.escape(self.baseFilename)}.*")
+            s.sort()
+            while len(s) > self.backupCount:
+                os.remove(s.pop(0))
+
         # print "%s -> %s" % (self.baseFilename, dfn)
         # if self.log_compressor:
         #     dfn = self.log_compressor.compress(log_type=self.name, file=dfn)
+
         if self.encoding:
             self.stream = codecs.open(self.baseFilename, 'w', self.encoding)
         else:
             self.stream = open(self.baseFilename, 'w')
 
-        self.rolloverAt += self.interval
+        self.rolloverAt = self.computeRollover(now)
 
         if self.archive_type == "rar":
             if os.path.exists(dfn + ".rar"):
@@ -414,11 +418,11 @@ class LoggerServiceImpl(LoggerService):
             archive_type=props.get(logger_settings_prefix + ".archive_type", "zip"),
             log_compressor=self.log_compressor,
             name=name,
-            interval=1440 - (5 * 60),
+            interval=int(props.get(logger_settings_prefix + ".interval", 1440 - (5 * 60))),
             encoding=encoding,
             filename=f"{os.path.join(self.config_service.dir('logs'), name)}-{self.config_service.app_name()}.txt",
             when=props.get(logger_settings_prefix + ".when", "midnight"),
-            backup_count=props.get(logger_settings_prefix + ".backup_count", 365))
+            backup_count=int(props.get(logger_settings_prefix + ".backup_count", 365)))
 
         if not formatter:
             formatter = SimpleJsonFormatter("%(t)s %(msg)s", trim_values_len=max_line_len)

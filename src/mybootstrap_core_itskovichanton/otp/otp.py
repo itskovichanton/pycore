@@ -37,7 +37,7 @@ class OTPClient(Protocol):
         """Читать сообщения свежее <since> каждые <wait> секунд до получения OTP или наступления <timeout>."""
 
 
-@bean(config=('gsfr.otp', OTPClientConfig), imap_config=('imap', IMAPConfig))
+@bean(config=('otp.mail', OTPClientConfig), imap_config=('imap', IMAPConfig))
 class MailOTPClient(OTPClient):
     """Ищет OTP на почте"""
     def init(self):
