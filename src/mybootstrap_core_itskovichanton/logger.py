@@ -418,6 +418,9 @@ class LoggerServiceImpl(LoggerService):
             archive_type=props.get(logger_settings_prefix + ".archive_type", "zip"),
             log_compressor=self.log_compressor,
             name=name,
+            # старое значение оставлено по умолчанию, чтобы ничего не сломать.
+            # оно работает с when = m, тогда interval = 19 часов.
+            # с when по умолчанию (midnight) interval = 1140 дней, больше 3 лет.
             interval=int(props.get(logger_settings_prefix + ".interval", 1440 - (5 * 60))),
             encoding=encoding,
             filename=f"{os.path.join(self.config_service.dir('logs'), name)}-{self.config_service.app_name()}.txt",
