@@ -39,12 +39,17 @@ class EmailServiceImpl(EmailService):
             return
 
         msg = MIMEMultipart()
+        msg['From'] = self.config.from_address
         msg['To'] = ",".join(a.toEmail) if type(a.toEmail) == list else a.toEmail
         msg['Subject'] = a.subject
-        msg.attach(MIMEText(a.content_plain, 'plain'))
+        if a.content_plain:
+            msg.attach(MIMEText(a.content_plain, 'plain'))
+        if a.content_html:
+            msg.attach(MIMEText(a.content_html, 'html'))
 
         # устанавливаем соединение с SMTP-сервером и отправляем сообщение
-        server = smtplib.SMTP(self.config.host, self.config.port)
+        server_type = smtplib.SMTP_SSL if self.config.port in (465, 587) else smtplib.SMTP
+        server = server_type(self.config.host, self.config.port)
         server.login(self.config.username, self.config.password)
         text = msg.as_string()
         server.sendmail(from_addr=self.config.from_address,
