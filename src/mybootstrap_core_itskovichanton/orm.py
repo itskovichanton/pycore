@@ -105,7 +105,7 @@ def to_real_entity(func, to_dict_with_key=None):
     def wrapper(*args, **kwargs):
         r = func(*args, **kwargs)
         if not r:
-            return
+            return r
         if isinstance(r, Model):
             return convert_to_real_entity(r)
         if isinstance(r, ModelSelect):
