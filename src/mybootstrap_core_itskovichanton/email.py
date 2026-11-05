@@ -39,7 +39,8 @@ class EmailServiceImpl(EmailService):
             return
 
         msg = MIMEMultipart()
-        msg['From'] = self.config.from_address
+        if self.config.from_address:
+            msg['From'] = self.config.from_address
         msg['To'] = ",".join(a.toEmail) if type(a.toEmail) == list else a.toEmail
         msg['Subject'] = a.subject
         if a.content_plain:
