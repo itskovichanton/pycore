@@ -38,6 +38,9 @@ class RedisService:
     def get(self) -> Redis:
         return Redis(host=self.config.host, port=self.config.port, db=0, password=self.config.password)
 
+    def get_address(self) -> str:
+        return f"{self.config.host}:{self.config.port}"
+
     def make_map(self, value_class: type, hname: str, key_prefix=None, deserializer=default_deserializer,
                  pre_serializer=lambda x: x):
 
