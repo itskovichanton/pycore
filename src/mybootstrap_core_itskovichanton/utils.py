@@ -375,9 +375,10 @@ def utf8_to_win1251(s: str):
 
 
 def trim_string(s: str, limit: int, ellipsis='…') -> str:
-    s = s.strip()
-    if len(s) > limit:
-        return s[:limit - 1].strip() + ellipsis
+    if s:
+        s = s.strip()
+        if len(s) > limit:
+            return s[:limit - 1].strip() + ellipsis
     return s
 
 
@@ -1247,3 +1248,10 @@ def group_list(a: list[dict], key: str, *fields_to_average) -> list[dict]:
         result.append(base)
 
     return result
+
+
+def safe_eval(func, *args, **kwargs):
+    try:
+        return func(*args, **kwargs)
+    except BaseException:
+        return

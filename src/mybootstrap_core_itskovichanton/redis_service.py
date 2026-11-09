@@ -27,6 +27,9 @@ def default_deserializer(value_class, value_dict):
 class RedisService:
     config_service: ConfigService
 
+    def get_address(self):
+        return f"{self.config.host}:{self.config.port}"
+
     def check_availability(self, timeout: float = 1.0):
         with socket.create_connection((self.config.host, self.config.port), timeout=timeout) as conn:
             conn.sendall(b"*1\r\n$4\r\nPING\r\n")
