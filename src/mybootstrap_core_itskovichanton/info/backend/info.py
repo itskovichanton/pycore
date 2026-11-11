@@ -1,3 +1,4 @@
+"""Реестр health/info-проверок: ``add_info(level, name, callable)`` → дерево для GET /info."""
 from typing import Protocol, Callable, Any
 
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
@@ -6,6 +7,7 @@ from src.mybootstrap_core_itskovichanton.utils import to_dict_deep
 
 
 class GetInfoUsecase(Protocol):
+    """Реестр именованных проверок (callable(level, name) → сообщение или dict)."""
 
     def info(self) -> dict:
         ...

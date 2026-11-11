@@ -1,3 +1,4 @@
+"""Маппинг dataclass ↔ peewee-модель: ``@entity``, ``to_model``, ``infer_where``, ``to_real_entity``."""
 import inspect
 import typing
 from dataclasses import dataclass

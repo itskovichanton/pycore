@@ -1,3 +1,4 @@
+"""Выполнение собранной curl-команды через ShellService (локально или по SSH) и разбор ответа."""
 from dataclasses import dataclass
 from src.mybootstrap_core_itskovichanton.curl.builder import CurlBuilder
 from src.mybootstrap_core_itskovichanton.logger import LoggerService
@@ -84,6 +85,7 @@ def _parse_response(output: str) -> Response:
 
 @bean
 class Curl:
+    """Выполняет CurlBuilder через bash, логирует summary, возвращает разобранный Response."""
     shell: ShellService
     logger_service: LoggerService
 

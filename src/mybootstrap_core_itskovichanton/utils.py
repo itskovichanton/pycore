@@ -1,3 +1,9 @@
+"""
+Набор утилит ядра: словари/JSON, декораторы (singleton, threaded, scheduled, silent_catch),
+проверка URL, HMAC, параллельный запуск, работа со строками и датами.
+
+Это «кладовка» без IoC: функции импортируются напрямую из сервисов.
+"""
 import argparse
 import asyncio
 import base64

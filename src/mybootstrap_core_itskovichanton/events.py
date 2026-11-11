@@ -1,3 +1,4 @@
+"""Обёртка EventBus: ``events.notify`` и декоратор ``@emit`` после успешного return."""
 from typing import Protocol
 
 from event_bus import EventBus
@@ -25,6 +26,7 @@ events = injector().inject(Events)
 
 
 def emit(event_name, threads=True):
+    """Декоратор: после return функции публикует результат в EventBus."""
     def decorator(func):
         def wrapper(*args, **kwargs):
             result = func(*args, **kwargs)

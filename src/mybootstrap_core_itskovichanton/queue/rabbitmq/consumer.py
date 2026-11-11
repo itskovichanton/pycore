@@ -1,3 +1,4 @@
+"""RabbitMQ consumer (pika): чтение сообщений, батчи, состояние соединения."""
 import json
 import logging
 import pickle

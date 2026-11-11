@@ -1,3 +1,9 @@
+"""
+Логирование приложения: JSON-файлы с ротацией, исходящие HTTP-сессии со статистикой,
+декоратор ``@log`` для методов.
+
+``LoggerService`` — bean; глобальный ``logger_service`` заполняется из ``di.injector()``.
+"""
 from collections import deque, defaultdict
 from logging import Logger
 
@@ -67,6 +73,7 @@ class RequestStats:
 
 
 class LoggerService(Protocol):
+    """Фабрика файловых/Graylog-логгеров и ``requests.Session`` с учётом статистики."""
 
     def get_session_stats(self):
         ...
@@ -238,6 +245,7 @@ _extra_log_prefix_len = len(_extra_log_prefix)
 
 
 class SessionWithStats(requests.Session):
+    """requests.Session: X-Request-ID, лог req/res, счётчики ошибок по route."""
 
     def __init__(self, name, logger=None, url=None, route=None, error_words_detectors=None,
                  retry: Retry | int | str | None = 0):
@@ -409,6 +417,7 @@ class LoggerServiceImpl(LoggerService):
 
     def get_file_logger(self, name: str, encoding: str = "utf-8",
                         formatter=None, max_line_len: int = 3000) -> Logger:
+        """JSON-логгер в ``logs/{name}-{app}.txt`` с ротацией (when/interval/backup_count из config)."""
         r = logging.getLogger(name)
         if hasattr(r, "inited"):
             return r

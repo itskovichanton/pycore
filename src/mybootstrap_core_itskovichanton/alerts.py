@@ -1,3 +1,9 @@
+"""
+Алерты и перехват необработанных исключений.
+
+``AlertServiceImpl.init`` ставит ``sys.excepthook`` и ``threading.excepthook``.
+Рассылка — через ``register_handler`` (почта, FR и т.д. подключаются снаружи).
+"""
 import logging
 import sys
 import threading
@@ -18,6 +24,7 @@ from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException, \
 @with_empty_method
 @dataclass
 class Alert:
+    """Сообщение для хендлеров: тема, текст, уровень. ``send=False`` или empty() — не отправлять."""
     message: Any = None
     subject: str = None
     level: int = 1
@@ -28,6 +35,7 @@ ExceptionInterceptor = Callable[[BaseException], BaseException]
 
 
 class AlertService(Protocol):
+    """Контракт: перехват исключений, рассылка Alert, interceptors и handlers."""
 
     def get_interceptors(self) -> list[ExceptionInterceptor]:
         """Get interceptors"""
@@ -47,6 +55,7 @@ alert_service: AlertService
 
 @bean
 class AlertServiceImpl(AlertService):
+    """Ставит excepthook, логирует и зовёт handlers. CoreException с suppress_report не алертится."""
     config_service: ConfigService
     _interceptors: list[ExceptionInterceptor] = default_dataclass_field([])
     handlers: list[callable] = default_dataclass_field([])

@@ -1,3 +1,4 @@
+"""Генерация и разбор JWT (HS256 по умолчанию). Секрет — ``jwt-generator.secret`` в config.yml."""
 import base64
 import json
 from dataclasses import dataclass
@@ -9,6 +10,7 @@ from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
 
 class JWT(Protocol):
+    """Подпись JWT с exp в claims и декод с проверкой подписи."""
     def generate(self, expiration: datetime, claims: dict) -> str:
         ...
 
@@ -24,6 +26,7 @@ class _Config:
 
 @bean(cfg=("jwt-generator", _Config, _Config()))
 class JWTImpl(JWT):
+    """Реализация на python-jose. Секрет и алгоритм из ``jwt-generator``."""
 
     def generate(self, expiration: datetime, claims: dict) -> str:
         claims["exp"] = expiration

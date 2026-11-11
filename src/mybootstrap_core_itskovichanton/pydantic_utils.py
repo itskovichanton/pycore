@@ -1,3 +1,4 @@
+"""Фабрики Annotated-типов Pydantic: разбор дат/datetime из нескольких строковых форматов."""
 from typing import Annotated, Optional
 from datetime import date, datetime
 

@@ -1,9 +1,4 @@
-"""
-requests.structures
-~~~~~~~~~~~~~~~~~~~
-
-Data structures that power Requests.
-"""
+"""CaseInsensitiveDict — словарь с регистронезависимыми ключами (как HTTP-заголовки)."""
 
 from collections import OrderedDict
 

@@ -1,3 +1,4 @@
+"""MVC: GetInfoAction + InfoController — отдают словарь проверок через ActionRunner."""
 from typing import Any
 
 from greenletio import async_, await_
@@ -10,6 +11,7 @@ from src.mybootstrap_core_itskovichanton.info.backend.info import GetInfoUsecase
 
 @bean
 class GetInfoAction(Action):
+    """Возвращает дерево info/health без параметров запроса."""
     info_uc: GetInfoUsecase
 
     def run(self, params: Any = None) -> Any:
