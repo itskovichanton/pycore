@@ -26,6 +26,7 @@ from requests import Session
 from requests.adapters import HTTPAdapter
 from src.mybootstrap_core_itskovichanton import alerts
 from src.mybootstrap_core_itskovichanton.alerts import Alert
+from src.mybootstrap_core_itskovichanton.structures import CaseInsensitiveDict
 from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, singleton, generate_uid, \
     UrlCheckResult, check_url_availability_by_url, is_listable
 from src.mybootstrap_ioc_itskovichanton import ioc
@@ -279,14 +280,18 @@ class SessionWithStats(requests.Session):
 
         # Запоминаем тело запроса
         req_body = kwargs.get("data") or kwargs.get("json") or None
-        req_headers = kwargs.get("headers")
-
-        if not req_headers:
-            req_headers = {}
+        # HTTP-заголовки без регистра: User-Agent / user-agent — один ключ
+        req_headers = CaseInsensitiveDict(kwargs.get("headers") or {})
 
         if self.name:
-            req_headers["User-Agent"] = 'mbulak:' + self.name
+            tag = "svc:" + self.name
+            existing_ua = req_headers.get("User-Agent")
+            if existing_ua:
+                req_headers["User-Agent"] = f"{existing_ua}_{tag}"
+            else:
+                req_headers["User-Agent"] = tag
         req_headers["X-Request-ID"] = generate_uid()
+        kwargs["headers"] = req_headers
 
         _extra = {k[_extra_log_prefix_len:]: to_dict_deep(v) for k, v in kwargs.items() if
                   k.startswith(_extra_log_prefix)}
