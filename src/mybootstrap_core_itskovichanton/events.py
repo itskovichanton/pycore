@@ -1,38 +1,7 @@
-"""Обёртка EventBus: ``events.notify`` и декоратор ``@emit`` после успешного return."""
-from typing import Protocol
+"""Глобальная шина событий приложения и флаг штатного завершения процесса."""
+from threading import Event
 
 from event_bus import EventBus
-from src.mybootstrap_ioc_itskovichanton.ioc import bean
 
-from src.mybootstrap_core_itskovichanton.di import injector
-
-
-class Events(Protocol):
-
-    def notify(self, event: str, *args, **kwargs):
-        ...
-
-
-@bean
-class EventsImpl(Events):
-    event_bus: EventBus = None
-
-    def notify(self, event: str, *args, **kwargs):
-        if self.event_bus:
-            self.event_bus.emit(event, *args, **kwargs)
-
-
-events = injector().inject(Events)
-
-
-def emit(event_name, threads=True):
-    """Декоратор: после return функции публикует результат в EventBus."""
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            result = func(*args, **kwargs)
-            events.notify(event_name, result, threads=threads)
-            return result
-
-        return wrapper
-
-    return decorator
+event_bus = EventBus()
+exit_signal = Event()

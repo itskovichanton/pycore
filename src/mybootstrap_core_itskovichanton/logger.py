@@ -4,36 +4,37 @@
 
 ``LoggerService`` — bean; глобальный ``logger_service`` заполняется из ``di.injector()``.
 """
-from collections import deque, defaultdict
-from logging import Logger
-
 import codecs
 import functools
 import glob
 import logging
 import logging.handlers
 import os
-import requests
 import threading
 import time
 import traceback
 import uuid
 import zipfile
+from collections import deque, defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
+from logging import Logger
+from typing import Protocol
+
+import requests
 from pythonjsonlogger import jsonlogger
 from requests import Session
 from requests.adapters import HTTPAdapter
+from src.mybootstrap_ioc_itskovichanton import ioc
+from src.mybootstrap_ioc_itskovichanton.config import ConfigService
+from src.mybootstrap_ioc_itskovichanton.ioc import bean
+from urllib3 import Retry
+
 from src.mybootstrap_core_itskovichanton import alerts
 from src.mybootstrap_core_itskovichanton.alerts import Alert
 from src.mybootstrap_core_itskovichanton.structures import CaseInsensitiveDict
 from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, singleton, generate_uid, \
     UrlCheckResult, check_url_availability_by_url, is_listable
-from src.mybootstrap_ioc_itskovichanton import ioc
-from src.mybootstrap_ioc_itskovichanton.config import ConfigService
-from src.mybootstrap_ioc_itskovichanton.ioc import bean
-from typing import Protocol
-from urllib3 import Retry
 
 
 @dataclass
@@ -284,12 +285,12 @@ class SessionWithStats(requests.Session):
         req_headers = CaseInsensitiveDict(kwargs.get("headers") or {})
 
         if self.name:
-            tag = "svc:" + self.name
             existing_ua = req_headers.get("User-Agent")
             if existing_ua:
-                req_headers["User-Agent"] = f"{existing_ua}_{tag}"
+                req_headers["User-Agent"] = existing_ua
+                req_headers["Service-User-Agent"] = "mbulak:" + self.name
             else:
-                req_headers["User-Agent"] = tag
+                req_headers["User-Agent"] = "mbulak:" + self.name
         req_headers["X-Request-ID"] = generate_uid()
         kwargs["headers"] = req_headers
 
