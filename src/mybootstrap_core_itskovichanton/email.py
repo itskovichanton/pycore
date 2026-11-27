@@ -1,3 +1,4 @@
+"""SMTP-отправка писем. Конфиг секции ``email``; без конфига ``send`` — no-op."""
 import smtplib
 from dataclasses import dataclass
 from email.mime.multipart import MIMEMultipart
@@ -26,6 +27,7 @@ class Params:
 
 
 class EmailService(Protocol):
+    """Отправка письма по Params (to, subject, plain/html)."""
 
     def send(self, a: Params):
         """Send email"""
@@ -33,6 +35,7 @@ class EmailService(Protocol):
 
 @bean(config=("email", EmailConfig, None))
 class EmailServiceImpl(EmailService):
+    """SMTP login + sendmail. Без секции ``email`` в конфиге ничего не делает."""
 
     def send(self, a: Params):
         if self.config is None or not (a.content_plain or a.content_html):

@@ -1,3 +1,4 @@
+"""Проверка входных параметров с ``ValidationException`` (reason = ERR_REASON_VALIDATION)."""
 from typing import Callable, Any
 
 from src.mybootstrap_mvc_itskovichanton.exceptions import CoreException, ERR_REASON_VALIDATION
@@ -16,6 +17,7 @@ VALIDATION_REASON_UNEXPECTABLE = "UNEXPECTABLE"
 
 
 class ValidationException(CoreException):
+    """Ошибка валидации параметра: имя, значение, validation_reason."""
     def __init__(self, message: str, param: str, invalid_value,
                  validation_reason: str = VALIDATION_REASON_UNEXPECTABLE, cause: BaseException = None):
         super().__init__(message, reason=ERR_REASON_VALIDATION, cause=cause)
@@ -25,6 +27,7 @@ class ValidationException(CoreException):
 
 
 def check_int(param: str, value, message="Некорректное int-значение") -> int:
+    """Приводит value к int или кидает ValidationException."""
     try:
         return int(value)
     except Exception as e:
@@ -51,6 +54,7 @@ def check_float(param: str, value, message="Некорректное float-зн�
 
 
 def check_not_empty(param: str, value, message: str = "Параметр не может содержать пустое значение"):
+    """Пустой value (None, '', 0, []) — ValidationException EMPTY."""
     if not value:
         raise ValidationException(message=message, invalid_value=value, param=param,
                                   validation_reason=VALIDATION_REASON_EMPTY)

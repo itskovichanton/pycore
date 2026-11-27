@@ -1,3 +1,4 @@
+"""Чтение OTP из IMAP: ищет свежие письма по subject/sender и отдаёт код из тела."""
 import email
 from email import policy
 from email.message import EmailMessage

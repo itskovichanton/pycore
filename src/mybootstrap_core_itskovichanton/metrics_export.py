@@ -1,3 +1,4 @@
+"""Prometheus: опциональный HTTP-exporter и декоратор времени выполнения ``prometheus_metric``."""
 import time
 from dataclasses import dataclass
 from typing import Protocol
@@ -19,6 +20,7 @@ class _Config:
 
 
 class MetricsExporter(Protocol):
+    """Gauge по имени и декоратор замера времени метода."""
     ...
 
 

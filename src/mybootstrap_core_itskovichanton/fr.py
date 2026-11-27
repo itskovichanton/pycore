@@ -1,3 +1,4 @@
+"""Отправка сообщений во внутренний FR-сервис (фоновый поток, ошибки глушатся)."""
 from contextlib import suppress
 from dataclasses import dataclass
 from typing import Protocol
@@ -23,6 +24,7 @@ class Post:
 
 
 class FRService(Protocol):
+    """Публикация короткого сообщения в FR (HTTP POST /postMsg)."""
 
     def send(self, a: Post):
         """Send post to fr"""

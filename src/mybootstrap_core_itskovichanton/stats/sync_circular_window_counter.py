@@ -1,3 +1,4 @@
+"""Синхронный кольцевой счётчик событий за скользящее окно (O(1) add / rate)."""
 from datetime import timedelta
 import time
 import threading

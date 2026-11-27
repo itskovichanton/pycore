@@ -1,3 +1,8 @@
+"""
+Асинхронный буфер уникальных ключей: копит объекты, флашит батчами в ``AbstractTransport``.
+
+Исключения транспорта: ``TransportError`` / ``TransportRetry`` / ``TransportSlowDown``.
+"""
 import asyncio
 
 
@@ -15,11 +20,13 @@ class TransportSlowDown(Exception):
 
 
 class AbstractTransport:
+    """Куда уходит батч: send(batch) может бросить Retry/SlowDown/Error."""
     async def send(self, batch):
         raise NotImplementedError
 
 
 class AsyncUniqueKeyBuffer:
+    """Буфер по уникальному obj['key']: flush по размеру или по интервалу, N worker'ов."""
     def __init__(
             self,
             transport,

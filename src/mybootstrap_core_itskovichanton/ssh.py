@@ -1,3 +1,4 @@
+"""SSH-клиент на paramiko: exec, загрузка/скачивание файлов, контекстный менеджер."""
 import os
 import tempfile
 from dataclasses import dataclass

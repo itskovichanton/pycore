@@ -1,3 +1,4 @@
+"""Окно длительностей: avg/max/min/median/stddev/percentile по последним N точкам."""
 import math
 from collections import deque
 from dataclasses import dataclass

@@ -1,32 +1,40 @@
-from collections import deque, defaultdict
-from logging import Logger
+"""
+Логирование приложения: JSON-файлы с ротацией, исходящие HTTP-сессии со статистикой,
+декоратор ``@log`` для методов.
 
+``LoggerService`` — bean; глобальный ``logger_service`` заполняется из ``di.injector()``.
+"""
 import codecs
 import functools
 import glob
 import logging
 import logging.handlers
 import os
-import requests
 import threading
 import time
 import traceback
 import uuid
 import zipfile
+from collections import deque, defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
+from logging import Logger
+from typing import Protocol
+
+import requests
 from pythonjsonlogger import jsonlogger
 from requests import Session
 from requests.adapters import HTTPAdapter
-from src.mybootstrap_core_itskovichanton import alerts
-from src.mybootstrap_core_itskovichanton.alerts import Alert
-from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, singleton, generate_uid, \
-    UrlCheckResult, check_url_availability_by_url, is_listable
 from src.mybootstrap_ioc_itskovichanton import ioc
 from src.mybootstrap_ioc_itskovichanton.config import ConfigService
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
-from typing import Protocol
 from urllib3 import Retry
+
+from src.mybootstrap_core_itskovichanton import alerts
+from src.mybootstrap_core_itskovichanton.alerts import Alert
+from src.mybootstrap_core_itskovichanton.structures import CaseInsensitiveDict
+from src.mybootstrap_core_itskovichanton.utils import trim_string, to_dict_deep, singleton, generate_uid, \
+    UrlCheckResult, check_url_availability_by_url, is_listable
 
 
 @dataclass
@@ -67,6 +75,7 @@ class RequestStats:
 
 
 class LoggerService(Protocol):
+    """Фабрика файловых/Graylog-логгеров и ``requests.Session`` с учётом статистики."""
 
     def get_session_stats(self):
         ...
@@ -238,6 +247,7 @@ _extra_log_prefix_len = len(_extra_log_prefix)
 
 
 class SessionWithStats(requests.Session):
+    """requests.Session: X-Request-ID, лог req/res, счётчики ошибок по route."""
 
     def __init__(self, name, logger=None, url=None, route=None, error_words_detectors=None,
                  retry: Retry | int | str | None = 0):
@@ -271,14 +281,18 @@ class SessionWithStats(requests.Session):
 
         # Запоминаем тело запроса
         req_body = kwargs.get("data") or kwargs.get("json") or None
-        req_headers = kwargs.get("headers")
-
-        if not req_headers:
-            req_headers = {}
+        # HTTP-заголовки без регистра: User-Agent / user-agent — один ключ
+        req_headers = CaseInsensitiveDict(kwargs.get("headers") or {})
 
         if self.name:
-            req_headers["User-Agent"] = 'mbulak:' + self.name
+            existing_ua = req_headers.get("User-Agent")
+            if existing_ua:
+                req_headers["User-Agent"] = existing_ua
+                req_headers["Service-User-Agent"] = "mbulak:" + self.name
+            else:
+                req_headers["User-Agent"] = "mbulak:" + self.name
         req_headers["X-Request-ID"] = generate_uid()
+        kwargs["headers"] = req_headers
 
         _extra = {k[_extra_log_prefix_len:]: to_dict_deep(v) for k, v in kwargs.items() if
                   k.startswith(_extra_log_prefix)}
@@ -409,6 +423,7 @@ class LoggerServiceImpl(LoggerService):
 
     def get_file_logger(self, name: str, encoding: str = "utf-8",
                         formatter=None, max_line_len: int = 3000) -> Logger:
+        """JSON-логгер в ``logs/{name}-{app}.txt`` с ротацией (when/interval/backup_count из config)."""
         r = logging.getLogger(name)
         if hasattr(r, "inited"):
             return r

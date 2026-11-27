@@ -1,3 +1,4 @@
+"""Сборка curl-команды: метод, URL, заголовки, тело, флаги. Результат — строка для executor."""
 import json
 import shlex
 import urllib.parse

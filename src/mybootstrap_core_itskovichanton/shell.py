@@ -1,3 +1,4 @@
+"""Выполнение команд и bash-скриптов локально или по SSH (``ShellService``)."""
 from os.path import basename
 
 import os
@@ -13,6 +14,7 @@ from typing import Protocol
 
 
 class ShellService(Protocol):
+    """Popen/execute локально; execute_bash — скрипт на диске или по SSH."""
     def execute(self, *args, encoding: str = None, cwd=None):
         ...
 

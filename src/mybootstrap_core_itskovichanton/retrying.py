@@ -1,3 +1,8 @@
+"""
+Встроенная копия библиотеки retrying (Apache 2.0) плюс сводка попыток.
+
+Используется декоратором ``@retry`` и ``retry_and_alert`` в alerts.py.
+"""
 # Copyright 2013-2014 Ray Holder
 #
 # Licensed under the Apache License, Version 2.0 (the "License");

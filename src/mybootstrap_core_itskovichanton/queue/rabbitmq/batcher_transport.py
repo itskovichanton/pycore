@@ -1,3 +1,4 @@
+"""Transport для AsyncUniqueKeyBuffer: публикация батча в RabbitMQ (json или pickle)."""
 import json
 import pickle
 

@@ -1,3 +1,4 @@
+"""Монтирует GET ``/info`` на FastAPI (JSON ResultPresenter)."""
 from fastapi import FastAPI
 from src.mybootstrap_ioc_itskovichanton.ioc import bean
 from src.mybootstrap_ioc_itskovichanton.utils import default_dataclass_field
@@ -11,6 +12,7 @@ from src.mybootstrap_core_itskovichanton.info.frontend.controller import InfoCon
 
 @bean
 class InfoFastAPISupport:
+    """Вешает GET /info на FastAPI."""
     controller: InfoController
     result_presenter_json: ResultPresenter = default_dataclass_field(JSONResultPresenterImpl())
 

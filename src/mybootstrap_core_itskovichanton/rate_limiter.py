@@ -1,3 +1,8 @@
+"""
+Rate limit через Redis (INCR + EXPIRE, Lua). Декоратор ``@rate_limited`` — sync и async.
+
+Ключ: ``{app_name}:rate_limit:{bucket}:{key}``. Превышение — CoreException TOO_MANY_REQUESTS.
+"""
 import functools
 import inspect
 from typing import Callable, Any
@@ -20,6 +25,7 @@ return current
 
 @bean
 class RateLimiter:
+    """Redis sliding/fixed-window лимитер. ``rate_limit`` — декоратор, ``acquire`` — прямой вызов."""
     redis_service: RedisService
     config_service: ConfigService
 

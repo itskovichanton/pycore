@@ -1,3 +1,4 @@
+"""Асинхронный кольцевой счётчик (неблокирующий add) + ThreadedWindowCounter для sync-кода."""
 import asyncio
 from datetime import timedelta
 import time
